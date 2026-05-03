@@ -1,26 +1,87 @@
 @import "tailwindcss";
 
+@theme {
+  --color-primary: #D14777;
+  --color-primary-dark: #A0365B;
+  --color-accent: #FF85A1;
+  --color-background: #FFF5F8;
+  --color-footer: #FDF1F5;
+  --color-text: #2D2D2D;
+  --color-text-muted: #6B7280;
+
+  --font-serif: "Playfair Display", serif;
+  --font-sans: var(--font-inter), sans-serif;
+}
+
+/* Colección 1 */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+  /* Mode 1 */
+  /* color */
+  --accent-100: #ffefd5;
+  --accent-300: #d3c5ad;
+  --accent-500: #b7a993;
+  --accent-700: #827661;
+  --accent-900: #382f1e;
+  --accent-main: #f7e7ce;
+  
+  --neutral-100: #f1f1ee;
+  --neutral-300: #c7c6c4;
+  --neutral-500: #91918e;
+  --neutral-700: #5e5f5d;
+  --neutral-900: #1a1c1a;
+  --neutral-main: #faf9f6;
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+  --primary-100: #ffecf0;
+  --primary-300: #ffd9e2;
+  --primary-500: #f15a95;
+  --primary-700: #8e004a;
+  --primary-900: #3e001d;
+  --primary-main: #de4b86;
+  
+  --secondary-100: #daf9d5;
+  --secondary-300: #ccebc7;
+  --secondary-500: #7c9879;
+  --secondary-700: #4a6549;
+  --secondary-900: #07200b;
+  --secondary-main: #8ba888;
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+
+  --primary: var(--primary-main);
+  --background: var(--neutral-main);
+  --foreground: var(--neutral-900);
 }
 
 body {
-  background: var(--background);
+  background-color: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans);
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-serif);
+}
+
+.premium-gradient {
+  background: linear-gradient(135deg, #D14777 0%, #A0365B 100%);
+}
+
+.glass-card {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.text-reveal {
+  animation: reveal 0.8s ease-out forwards;
+}
+
+@keyframes reveal {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
