@@ -2,11 +2,16 @@
   "name": "academia-haru-yo-koi",
   "version": "0.1.0",
   "private": true,
+  "workspaces": [
+    "cms"
+  ],
   "scripts": {
     "dev": "next dev",
-    "strapi": "cd cms && npm run develop",
+    "strapi": "npm run develop --workspace=cms",
     "full": "concurrently \"npm run dev\" \"npm run strapi\"",
     "build": "next build",
+    "build:cms": "npm run build --workspace=cms",
+    "build:all": "npm run build && npm run build:cms",
     "start": "next start",
     "lint": "eslint"
   },
