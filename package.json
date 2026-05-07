@@ -2,17 +2,14 @@
   "name": "academia-haru-yo-koi",
   "version": "0.1.0",
   "private": true,
-  "workspaces": [
-    "cms"
-  ],
   "scripts": {
     "dev": "next dev",
-    "strapi": "npm run develop --workspace=cms",
+    "strapi": "cd cms && npm run develop",
     "full": "concurrently \"npm run dev\" \"npm run strapi\"",
     "build": "next build",
-    "build:cms": "echo 'Skipping Strapi build on server (using pre-built files)'",
-    "build:all": "npm run build && npm run build:cms",
-    "build:local": "npm run build && npm run build --workspace=cms",
+    "build:cms": "echo 'Skipping Strapi build on server'",
+    "build:all": "npm run build",
+    "build:local": "npm run build && cd cms && npm run build",
     "start": "next start",
     "lint": "eslint"
   },
