@@ -1,17 +1,6 @@
-@import "tailwindcss";
-
-@theme {
-  --color-primary: #D14777;
-  --color-primary-dark: #A0365B;
-  --color-accent: #FF85A1;
-  --color-background: #FFF5F8;
-  --color-footer: #FDF1F5;
-  --color-text: #2D2D2D;
-  --color-text-muted: #6B7280;
-
-  --font-serif: "Playfair Display", serif;
-  --font-sans: var(--font-inter), sans-serif;
-}
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 /* Colección 1 */
 :root {
