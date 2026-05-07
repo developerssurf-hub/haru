@@ -24,7 +24,9 @@
     "react-dom": "^19.0.0",
     "react-hook-form": "^7.53.0",
     "tailwind-merge": "^2.5.0",
-    "zod": "^3.23.0"
+    "zod": "^3.23.0",
+    "@strapi/strapi": "5.42.1",
+    "mysql2": "^3.11.0"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.1.0",
