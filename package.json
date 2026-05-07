@@ -9,9 +9,9 @@
     "dev": "next dev",
     "strapi": "npm run develop --workspace=cms",
     "full": "concurrently \"npm run dev\" \"npm run strapi\"",
-    "build": "next build",
+    "build": "npm run build:all",
     "build:cms": "npm run build --workspace=cms",
-    "build:all": "npm run build && npm run build:cms",
+    "build:all": "next build && npm run build --workspace=cms",
     "start": "next start",
     "lint": "eslint"
   },
