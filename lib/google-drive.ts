@@ -7,8 +7,8 @@ function getAuth() {
   
   // Limpieza agresiva: quitar comillas dobles o simples al inicio/fin y espacios
   privateKey = privateKey.replace(/^["']|["']$/g, '').trim();
-  // Reemplazar saltos de línea escapados por reales
-  privateKey = privateKey.replace(/\\n/g, '\n');
+  // Reemplazar saltos de línea escapados por reales (soporta doble escape de Hostinger)
+  privateKey = privateKey.replace(/\\+n/g, '\n');
 
   console.log('DEBUG: Private Key format check ->', JSON.stringify(privateKey.substring(0, 40)));
 
