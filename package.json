@@ -4,12 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "strapi": "cd cms && npm run develop",
-    "full": "concurrently \"npm run dev\" \"npm run strapi\"",
     "build": "next build",
-    "build:cms": "echo 'Skipping Strapi build on server'",
-    "build:all": "npm run build",
-    "build:local": "npm run build && cd cms && npm run build",
     "start": "next start",
     "lint": "eslint"
   },
@@ -25,10 +20,6 @@
     "react-hook-form": "^7.53.0",
     "tailwind-merge": "^2.5.0",
     "zod": "^3.23.0",
-    "@strapi/strapi": "5.42.1",
-    "mysql2": "^3.11.0",
-    "ajv": "^8.12.0",
-    "ajv-formats": "^2.1.1",
     "typescript": "^5.0.0",
     "@types/node": "^20.0.0",
     "@types/react": "^19.0.0",
@@ -37,7 +28,6 @@
   "devDependencies": {
     "@eslint/eslintrc": "^3.1.0",
     "autoprefixer": "^10.4.0",
-    "concurrently": "^9.1.0",
     "eslint": "^9",
     "eslint-config-next": "^15.0.0",
     "postcss": "^8.4.0",
