@@ -3,10 +3,19 @@ import { google, drive_v3 } from 'googleapis';
 // ── Auth ──────────────────────────────────────────────────────────────────────
 
 function getAuth() {
+  let privateKey = process.env.GOOGLE_PRIVATE_KEY || '';
+  
+  // Limpieza agresiva: quitar comillas dobles o simples al inicio/fin y espacios
+  privateKey = privateKey.replace(/^["']|["']$/g, '').trim();
+  // Reemplazar saltos de línea escapados por reales
+  privateKey = privateKey.replace(/\\n/g, '\n');
+
+  console.log('DEBUG: Private Key format check ->', JSON.stringify(privateKey.substring(0, 40)));
+
   return new google.auth.GoogleAuth({
     credentials: {
       client_email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
-      private_key: process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n').replace(/^"|"$/g, ''),
+      private_key: privateKey,
     },
     scopes: ['https://www.googleapis.com/auth/drive'],
   });
