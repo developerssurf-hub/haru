@@ -14,15 +14,13 @@ export default function Footer() {
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-8">
           <div className="flex flex-col gap-4">
             <Link href="/" className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full premium-gradient flex items-center justify-center">
-                <span className="text-white font-serif text-sm">春</span>
-              </div>
+              <img src="/logo.png" alt="Logo Haru yo Koi" className="w-10 h-10  group-hover:scale-110" />
               <span className="font-serif text-xl font-semibold text-text">
                 Haru yo Koi
               </span>
             </Link>
             <p className="text-sm text-text-muted max-w-xs">
-              © 2024 Academia Haru yo Koi. Embracing the Ethereal Vernal Bloom.
+              © 2024 Academia Haru yo Koi.
             </p>
           </div>
 

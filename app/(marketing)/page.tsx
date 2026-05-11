@@ -37,12 +37,10 @@ export default function Home() {
 
               <div className="w-full h-full bg-zinc-200  flex items-center justify-center overflow-hidden">
                 <Image
-                  src="/hero-calligraphy.png"
-                  alt="Hand painting calligraphy"
+                  src="/portada.jpeg"
+                  alt="Academia Haru Yo Koi"
                   fill
                   className="object-cover"
-                  placeholder="blur"
-                  blurDataURL="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg=="
                 />
               </div>
             </div>

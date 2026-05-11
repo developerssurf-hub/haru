@@ -9,13 +9,11 @@ export default function Navbar() {
   ];
 
   return (
-    <nav className="sticky top-0 z-50 bg-background/80 backdrop-blur-md border-b border-primary/10">
+    <nav className="sticky top-0 z-50 bg-background/70 backdrop-blur-md border-b border-primary/10">
       <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
         {/* Logo */}
         <Link href="/" className="flex items-center gap-3 group">
-          <div className="w-10 h-10 rounded-full premium-gradient flex items-center justify-center transition-transform group-hover:scale-110">
-            <span className="text-white font-serif text-xl">春</span>
-          </div>
+          <img src="/logo.png" alt="Logo Haru yo Koi" className="w-10 h-10  group-hover:scale-110" />
           <span className="font-serif text-2xl font-semibold tracking-tight text-text transition-colors group-hover:text-primary">
             Haru yo Koi
           </span>

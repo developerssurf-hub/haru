@@ -9,7 +9,11 @@ export default function LoginPage() {
         {/* Logo/Brand */}
         <div className="flex items-center gap-3 self-start">
           <div className="size-11 rounded-full premium-gradient flex items-center justify-center shadow-sm">
-            <span className="text-white font-serif text-xl">春</span>
+            <img
+              src="/logo.png"
+              alt="Logo Haru yo Koi"
+              className="w-10 h-10  group-hover:scale-110"
+            />
           </div>
           <span className="font-serif font-bold text-2xl text-primary-900">
             Haru yo Koi
@@ -24,7 +28,7 @@ export default function LoginPage() {
         {/* Footer info */}
         <div className="self-start">
           <p className="font-serif text-sm text-black/60">
-            2026 R Academia haru yo kopi
+            2026 R Academia haru yo koi
           </p>
         </div>
       </div>
@@ -40,7 +44,7 @@ export default function LoginPage() {
         />
         {/* Overlay gradient for depth */}
         <div className="absolute inset-0 bg-gradient-to-t from-primary-900/80 via-transparent to-primary-900/40" />
-        
+
         {/* Decorative elements or text could go here */}
         <div className="absolute bottom-12 right-12 text-right text-white/80 max-w-xs">
           <p className="font-serif text-lg italic">

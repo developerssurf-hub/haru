@@ -33,8 +33,22 @@ export default async function BlogPage() {
               const publishedAt = post.publishedAt;
               
               // SIGUIENDO TU JSON: post.Miniatura.url
+              // Pero lo hacemos robusto para Strapi 5 (puede ser objeto, array o con wrapper data)
               const miniatura = post.Miniatura;
-              const imageUrl = miniatura?.url;
+              
+              // Intentamos obtener la URL de varias formas comunes en Strapi
+              let imageUrl = null;
+              
+              if (miniatura) {
+                if (Array.isArray(miniatura)) {
+                  imageUrl = miniatura[0]?.url || miniatura[0]?.attributes?.url;
+                } else if (miniatura.data) {
+                  imageUrl = miniatura.data.url || miniatura.data.attributes?.url;
+                } else {
+                  imageUrl = miniatura.url || miniatura.attributes?.url;
+                }
+              }
+
               const thumbUrl = getStrapiMedia(imageUrl);
               
               return (

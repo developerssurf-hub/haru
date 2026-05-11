@@ -22,6 +22,11 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: 'https',
+        hostname: 'api.japonesconharuyokoi.com',
+        pathname: '/uploads/**',
+      },
+      {
+        protocol: 'https',
         hostname: 'images.unsplash.com',
       },
     ],
