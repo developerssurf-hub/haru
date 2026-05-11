@@ -3,18 +3,19 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
-interface SidebarLinkProps {
+interface SidebarLinkProps extends React.AnchorHTMLAttributes<HTMLAnchorElement> {
   href: string;
   children: React.ReactNode;
 }
 
-export default function SidebarLink({ href, children }: SidebarLinkProps) {
+export default function SidebarLink({ href, children, ...props }: SidebarLinkProps) {
   const pathname = usePathname();
   const isActive = pathname === href;
 
   return (
     <Link
       href={href}
+      {...props}
       className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
         isActive
           ? 'bg-primary/8 text-primary font-semibold'

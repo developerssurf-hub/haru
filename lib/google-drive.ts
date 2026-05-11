@@ -355,3 +355,48 @@ export async function uploadFile(params: {
 
   return res.data.id ?? '';
 }
+
+/**
+ * List all contents inside the "Material adicional" subfolder of a level folder.
+ */
+export async function getAdditionalMaterial(levelName?: string): Promise<{ label: string; href: string }[]> {
+  const drive = getDriveClient();
+  const rootId = process.env.DRIVE_ROOT_FOLDER_ID;
+  
+  if (!levelName || !rootId) return [];
+
+  console.log('DEBUG: Fetching additional material for level:', levelName);
+
+  try {
+    // 1. Find level folder
+    const levelFolderId = await getSubfolder(rootId, levelName);
+    if (!levelFolderId) {
+      console.warn(`DEBUG: Level folder "${levelName}" not found.`);
+      return [];
+    }
+
+    // 2. Find "Material adicional" subfolder
+    const materialFolderId = await getSubfolder(levelFolderId, 'Material adicional');
+    if (!materialFolderId) {
+      console.warn(`DEBUG: "Material adicional" folder not found inside ${levelName}.`);
+      return [];
+    }
+
+    // 3. List all files/folders inside
+    const res = await drive.files.list({
+      q: `'${materialFolderId}' in parents and trashed = false`,
+      fields: 'files(id, name, webViewLink, mimeType)',
+      orderBy: 'name',
+      pageSize: 100,
+    });
+
+    return (res.data.files ?? []).map(f => ({
+      label: f.name || 'Sin nombre',
+      href: f.webViewLink || '#',
+    }));
+
+  } catch (error) {
+    console.error('DEBUG: Error fetching additional material:', error);
+    return [];
+  }
+}

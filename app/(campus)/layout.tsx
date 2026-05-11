@@ -1,4 +1,4 @@
-import { getAvailableLessons } from '@/lib/google-drive';
+import { getAvailableLessons, getAdditionalMaterial } from '@/lib/google-drive';
 import { getMe } from '@/lib/user';
 import { logoutAction } from '@/app/actions/auth';
 import SidebarLink from '@/components/campus/SidebarLink';
@@ -10,11 +10,7 @@ const generalLinks = [
   { label: 'Links importantes', href: '/campus/links' },
 ];
 
-const materialLinks = [
-  { label: 'Waku Waku', href: '/campus/material/waku-waku' },
-  { label: 'Komodo no Nihongo ky...', href: '/campus/material/kodomo' },
-  { label: 'Audios', href: '/campus/material/audios' },
-];
+// Static material links removed in favor of dynamic Google Drive content
 
 export default async function CampusLayout({
   children,
@@ -26,7 +22,9 @@ export default async function CampusLayout({
   console.log('DEBUG: User detected:', user?.username, 'Role:', role);
   
   const lecciones = await getAvailableLessons(role);
+  const materialLinks = await getAdditionalMaterial(role);
   console.log('DEBUG: Lessons fetched:', lecciones.length);
+  console.log('DEBUG: Additional material fetched:', materialLinks.length);
 
   return (
     <div className="min-h-screen bg-[var(--neutral-main)] flex">
@@ -59,18 +57,20 @@ export default async function CampusLayout({
           </div>
 
           {/* Material */}
-          <div className="px-4">
-            <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-2 px-2">
-              Material para cursada
-            </p>
-            <div className="flex flex-col gap-0.5">
-              {materialLinks.map((item) => (
-                <SidebarLink key={item.label} href={item.href}>
-                  {item.label}
-                </SidebarLink>
-              ))}
+          {materialLinks.length > 0 && (
+            <div className="px-4">
+              <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-2 px-2">
+                Material para cursada
+              </p>
+              <div className="flex flex-col gap-0.5">
+                {materialLinks.map((item) => (
+                  <SidebarLink key={item.label} href={item.href} target="_blank">
+                    {item.label}
+                  </SidebarLink>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Lecciones */}
           <div className="px-4">
