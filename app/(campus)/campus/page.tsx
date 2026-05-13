@@ -1,9 +1,9 @@
-import { getMe } from '@/lib/user';
+import { getMe, getEffectiveRole } from '@/lib/user';
 
 export default async function Dashboard() {
   const user = await getMe();
   const username = user?.username || 'Estudiante';
-  const roleName = user?.role?.name || 'Alumno';
+  const roleName = await getEffectiveRole() || 'Alumno';
 
   return (
     <div className="flex flex-col gap-8">

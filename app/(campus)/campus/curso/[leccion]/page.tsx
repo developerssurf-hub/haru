@@ -1,5 +1,5 @@
 import { getLessonMeta } from '@/lib/google-drive';
-import { getMe } from '@/lib/user';
+import { getMe, getEffectiveRole } from '@/lib/user';
 import LeccionTabs from './LeccionTabs';
 import Image from 'next/image';
 
@@ -9,8 +9,7 @@ export default async function LeccionPage({
   params: Promise<{ leccion: string }>;
 }) {
   const { leccion } = await params;
-  const user = await getMe();
-  const level = user?.role?.name;
+  const level = await getEffectiveRole();
 
   // Fetch lesson metadata from Drive (portada, description, subfolder IDs)
   // Falls back gracefully when Drive is not configured (dev without .env.local)

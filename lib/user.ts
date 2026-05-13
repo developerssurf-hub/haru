@@ -50,3 +50,16 @@ export async function getUserRole() {
   console.log('DEBUG: Role name extracted:', roleName);
   return roleName || null;
 }
+
+export async function getEffectiveRole() {
+  const user = await getMe();
+  const actualRole = user?.role?.name;
+  
+  if (actualRole === 'Directora') {
+    const cookieStore = await cookies();
+    const simulatedRole = cookieStore.get("simulated_role")?.value;
+    return simulatedRole || 'Año I Adultos';
+  }
+  
+  return actualRole || null;
+}

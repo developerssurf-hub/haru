@@ -27,5 +27,16 @@ export async function loginAction(formData: FormData) {
 export async function logoutAction() {
   const cookieStore = await cookies();
   cookieStore.delete("jwt");
+  cookieStore.delete("simulated_role");
   redirect("/login");
+}
+
+export async function setSimulatedRoleAction(role: string) {
+  const cookieStore = await cookies();
+  cookieStore.set("simulated_role", role, {
+    path: "/",
+    maxAge: 60 * 60 * 24, // 1 day
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+  });
 }

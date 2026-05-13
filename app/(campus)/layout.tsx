@@ -1,7 +1,9 @@
 import { getAvailableLessons, getAdditionalMaterial } from '@/lib/google-drive';
-import { getMe } from '@/lib/user';
+import { getMe, getEffectiveRole } from '@/lib/user';
 import { logoutAction } from '@/app/actions/auth';
 import SidebarLink from '@/components/campus/SidebarLink';
+import RoleSwitcher from '@/components/campus/RoleSwitcher';
+import { cookies } from 'next/headers';
 
 const generalLinks = [
   { label: 'Inicio', href: '/campus' },
@@ -18,13 +20,23 @@ export default async function CampusLayout({
   children: React.ReactNode;
 }) {
   const user = await getMe();
-  const role = user?.role?.name;
-  console.log('DEBUG: User detected:', user?.username, 'Role:', role);
+  const actualRole = user?.role?.name;
+  const effectiveRole = await getEffectiveRole();
   
-  const lecciones = await getAvailableLessons(role);
-  const materialLinks = await getAdditionalMaterial(role);
-  console.log('DEBUG: Lessons fetched:', lecciones.length);
+  // Logic for Directora simulation UI
+  const cookieStore = await cookies();
+  const simulatedRole = cookieStore.get('simulated_role')?.value;
+  
+  const isDirectora = actualRole === 'Directora';
+
+  console.log('DEBUG: User detected:', user?.username, 'Actual Role:', actualRole, 'Effective Role:', effectiveRole);
+  
+  const lecciones = await getAvailableLessons(effectiveRole);
+  const materialLinks = await getAdditionalMaterial(effectiveRole);
+  console.log('DEBUG: Lessons fetched:', lecciones.length, 'for role:', effectiveRole);
   console.log('DEBUG: Additional material fetched:', materialLinks.length);
+
+  const availableRoles = ['Año I Adultos', 'Año II Adultos', 'Año III Adultos', 'Año IV Adultos', 'Estudiante', 'Profesor'];
 
   return (
     <div className="min-h-screen bg-[var(--neutral-main)] flex">
@@ -39,6 +51,14 @@ export default async function CampusLayout({
             Campus Haru
           </span>
         </div>
+
+        {/* Role Switcher for Directora */}
+        {isDirectora && (
+          <RoleSwitcher 
+            currentRole={simulatedRole || 'Año I Adultos'} 
+            availableRoles={availableRoles} 
+          />
+        )}
 
         {/* Nav */}
         <nav className="flex-1 overflow-y-auto py-4 flex flex-col gap-5">
@@ -116,7 +136,7 @@ export default async function CampusLayout({
                 {user?.username || 'Estudiante'}
               </span>
               <span className="text-[10px] font-medium text-primary uppercase tracking-tighter">
-                {role || 'Alumno'}
+                {isDirectora && simulatedRole ? `${actualRole} (como ${simulatedRole})` : (actualRole || 'Alumno')}
               </span>
             </div>
           </div>

@@ -7,8 +7,8 @@
   "confirmed": true,
   "blocked": false,
   "createdAt": "2026-04-26T16:22:22.861Z",
-  "updatedAt": "2026-05-08T03:37:31.589Z",
-  "publishedAt": "2026-05-08T03:37:31.505Z",
+  "updatedAt": "2026-05-13T02:05:44.024Z",
+  "publishedAt": "2026-05-13T02:05:44.007Z",
   "EDAD": null,
   "Documento": null,
   "PROVINCIA": null,
@@ -16,13 +16,13 @@
   "MenorDeEdad": null,
   "MAYORACARGO": null,
   "role": {
-    "id": 7,
-    "documentId": "dakfvlpm3jcrw8tdj81ha2h7",
-    "name": "Año I Adultos",
-    "description": "Año 1 Adultos",
-    "type": "ano_i_adultos",
-    "createdAt": "2026-05-03T01:32:33.725Z",
-    "updatedAt": "2026-05-03T01:32:33.725Z",
-    "publishedAt": "2026-05-03T01:32:33.726Z"
+    "id": 12,
+    "documentId": "yu79y6esqdb7kftvuufqsxkl",
+    "name": "Directora",
+    "description": "Rol para ver toda la plataforma",
+    "type": "directora",
+    "createdAt": "2026-05-13T01:58:06.092Z",
+    "updatedAt": "2026-05-13T01:58:06.092Z",
+    "publishedAt": "2026-05-13T01:58:06.092Z"
   }
 }
