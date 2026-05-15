@@ -7,9 +7,6 @@ import { cookies } from 'next/headers';
 
 const generalLinks = [
   { label: 'Inicio', href: '/campus' },
-  { label: 'Avisos', href: '/campus/avisos' },
-  { label: 'Dudas y consultas', href: '/campus/dudas' },
-  { label: 'Links importantes', href: '/campus/links' },
 ];
 
 // Static material links removed in favor of dynamic Google Drive content
@@ -22,28 +19,28 @@ export default async function CampusLayout({
   const user = await getMe();
   const actualRole = user?.role?.name;
   const effectiveRole = await getEffectiveRole();
-  
+
   // Logic for Directora simulation UI
   const cookieStore = await cookies();
   const simulatedRole = cookieStore.get('simulated_role')?.value;
-  
+
   const isDirectora = actualRole === 'Directora';
 
   console.log('DEBUG: User detected:', user?.username, 'Actual Role:', actualRole, 'Effective Role:', effectiveRole);
-  
+
   const lecciones = await getAvailableLessons(effectiveRole);
   const materialLinks = await getAdditionalMaterial(effectiveRole);
   console.log('DEBUG: Lessons fetched:', lecciones.length, 'for role:', effectiveRole);
   console.log('DEBUG: Additional material fetched:', materialLinks.length);
 
   const availableRoles = [
-    'Año I Adultos', 
-    'Año II Adultos', 
-    'Año III Adultos', 
-    'Año IV Adultos', 
-    'Nivel I Niños', 
+    'Año I Adultos',
+    'Año II Adultos',
+    'Año III Adultos',
+    'Año IV Adultos',
+    'Nivel I Niños',
     'Nivel II Niños',
-    'Estudiante', 
+    'Estudiante',
     'Profesor'
   ];
 
@@ -63,9 +60,9 @@ export default async function CampusLayout({
 
         {/* Role Switcher for Directora */}
         {isDirectora && (
-          <RoleSwitcher 
-            currentRole={simulatedRole || 'Año I Adultos'} 
-            availableRoles={availableRoles} 
+          <RoleSwitcher
+            currentRole={simulatedRole || 'Año I Adultos'}
+            availableRoles={availableRoles}
           />
         )}
 
