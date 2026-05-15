@@ -1,0 +1,4 @@
+Endpoint: proxima-clases
+Status: 500
+Body: {"data":null,"error":{"status":500,"name":"InternalServerError","message":"Internal Server Error"}}...
+

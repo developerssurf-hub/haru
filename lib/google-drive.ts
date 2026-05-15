@@ -165,7 +165,7 @@ export async function getAvailableLessons(levelName?: string): Promise<{ label: 
     // Aggressive Fallback: If no lessons found, check if they are in "Nivel I", "Nivel II" or other subfolders
     if (files.length === 0) {
       const levelFolders = allFiles.filter(f => 
-        (f.name === 'Nivel I' || f.name === 'Nivel II' || f.name === 'Año I Adultos' || f.name === 'Año II Adultos' || f.name === 'Año III Adultos' || f.name === 'Año IV Adultos') && 
+        (f.name === 'Nivel I' || f.name === 'Nivel II' || f.name === 'Nivel I Niños' || f.name === 'Nivel II Niños' || f.name === 'Año I Adultos' || f.name === 'Año II Adultos' || f.name === 'Año III Adultos' || f.name === 'Año IV Adultos') && 
         f.mimeType === 'application/vnd.google-apps.folder'
       );
       for (const folder of levelFolders) {

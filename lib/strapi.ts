@@ -1,9 +1,15 @@
 const STRAPI_URL = process.env.NEXT_PUBLIC_STRAPI_URL || 'http://localhost:1337';
 
-export async function fetchStrapi(endpoint: string, query?: string) {
+export async function fetchStrapi(endpoint: string, query?: string, token?: string) {
   try {
+    const headers: any = {};
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
     const res = await fetch(`${STRAPI_URL}/api/${endpoint}${query ? `?${query}` : ''}`, {
-      cache: 'no-store', // Desactivamos caché temporalmente para ver cambios reales
+      headers,
+      cache: 'no-store',
     });
     const data = await res.json();
     return data;
@@ -20,4 +26,21 @@ export function getStrapiMedia(url: string | null) {
   // Nos aseguramos de que no haya dobles barras y que empiece por /
   const cleanUrl = url.startsWith('/') ? url : `/${url}`;
   return `${STRAPI_URL}${cleanUrl}`;
+}
+
+export async function postStrapi(endpoint: string, data: any, token: string) {
+  try {
+    const res = await fetch(`${STRAPI_URL}/api/${endpoint}`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ data }),
+    });
+    return await res.json();
+  } catch (error) {
+    console.error('Error posting to Strapi:', error);
+    return null;
+  }
 }

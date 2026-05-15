@@ -36,7 +36,16 @@ export default async function CampusLayout({
   console.log('DEBUG: Lessons fetched:', lecciones.length, 'for role:', effectiveRole);
   console.log('DEBUG: Additional material fetched:', materialLinks.length);
 
-  const availableRoles = ['Año I Adultos', 'Año II Adultos', 'Año III Adultos', 'Año IV Adultos', 'Estudiante', 'Profesor'];
+  const availableRoles = [
+    'Año I Adultos', 
+    'Año II Adultos', 
+    'Año III Adultos', 
+    'Año IV Adultos', 
+    'Nivel I Niños', 
+    'Nivel II Niños',
+    'Estudiante', 
+    'Profesor'
+  ];
 
   return (
     <div className="min-h-screen bg-[var(--neutral-main)] flex">
