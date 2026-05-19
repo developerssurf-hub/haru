@@ -39,6 +39,7 @@ export default async function CampusLayout({
     'Año II Adultos',
     'Año III Adultos',
     'Año IV Adultos',
+    'Año V Adultos',
     'Nivel I Niños',
     'Nivel II Niños',
     'Estudiante',
