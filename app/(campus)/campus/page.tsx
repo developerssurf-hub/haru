@@ -59,14 +59,24 @@ export default async function Dashboard() {
 
   return (
     <div className="flex flex-col gap-8">
-      <div className="flex flex-col gap-2">
-        <div className="flex items-center gap-3">
-          <h1 className="text-3xl font-serif text-text">Okaeri, {username}</h1>
-          <span className="px-2.5 py-1 bg-primary/10 text-primary text-[10px] font-black uppercase tracking-widest rounded-lg border border-primary/20 shadow-sm">
-            {roleName}
-          </span>
+      <div className="flex justify-between items-start">
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center gap-3">
+            <h1 className="text-3xl font-serif text-text">Okaeri, {username}</h1>
+            <span className="px-2.5 py-1 bg-primary/10 text-primary text-[10px] font-black uppercase tracking-widest rounded-lg border border-primary/20 shadow-sm">
+              {roleName}
+            </span>
+          </div>
+          <p className="text-text-muted font-medium">Es un buen día para continuar tu camino en el japonés.</p>
         </div>
-        <p className="text-text-muted font-medium">Es un buen día para continuar tu camino en el japonés.</p>
+        {isDirectora && (
+          <a
+            href="/campus/nuevo?type=curso"
+            className="text-[10px] font-bold uppercase tracking-widest text-primary bg-primary/10 px-3 py-1.5 rounded-lg hover:bg-primary hover:text-white transition-all shadow-sm shrink-0 mt-2"
+          >
+            + Añadir Curso Público
+          </a>
+        )}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

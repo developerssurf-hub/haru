@@ -32,6 +32,9 @@ export default async function NuevoContenidoPage({
   } else if (type === 'juego') {
     title = 'Nuevo Juego';
     endpoint = 'patio-de-juegos';
+  } else if (type === 'curso') {
+    title = 'Nuevo Curso';
+    endpoint = 'cursos';
   }
 
   return (

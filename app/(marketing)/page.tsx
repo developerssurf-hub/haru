@@ -1,6 +1,11 @@
 import Image from "next/image";
+import { fetchStrapi } from '@/lib/strapi';
 
-export default function Home() {
+export default async function Home() {
+  const resCursos = await fetchStrapi('cursos', 'populate=*');
+  const cursosRaw = resCursos?.data || [];
+  const cursos = Array.isArray(cursosRaw) ? cursosRaw : (cursosRaw ? [cursosRaw] : []);
+
   return (
     <div className="flex flex-col gap-24 pb-24">
       {/* Hero Section */}
@@ -62,26 +67,57 @@ export default function Home() {
             </p>
           </div>
 
-          {[
-            { title: "Preparación JLPT", desc: "N5 a N1 con simulacros", Image: "/curso1.png" },
-            { title: "Japonés para niños", desc: "Desde los 6 años", Image: "/curso2.png" },
-            { title: "Japonés Express", desc: "Viajes y negocios", Image: "/curso3.png" }
-          ].map((card, i) => (
-            <div
-              key={i}
-              className="group p-8 rounded-[20px] transition-all hover:-translate-y-2 cursor-pointer flex flex-col justify-end min-h-[450px] relative overflow-hidden shadow-sm hover:shadow-xl"
-              style={{ backgroundImage: `url(${card.Image})` }}
-            >
-              <div className="absolute top-0 right-0 w-32 h-32 premium-gradient opacity-10 rounded-full -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-700"></div>
-              <div className="relative z-10 bg-neutral-100 p-4 rounded-[20px] min-h-[200px]">
-                <h3 className="text-2xl font-serif text-text mb-2">{card.title}</h3>
-                <p className="text-sm text-text-muted mb-6">{card.desc}</p>
-                <div className="w-10 h-10 rounded-full border border-text/10 flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-all">
-                  →
+          {cursos.length > 0 ? cursos.map((curso: any, i: number) => {
+            const attributes = curso.attributes || curso;
+            const titulo = attributes.Nombre || attributes.nombre || attributes.Titulo || attributes.titulo || 'Curso';
+            const descripcion = attributes.Descripcion || attributes.descripcion || attributes.description || '';
+            const inicio = attributes.Inicio || attributes.inicio || attributes.fecha || '';
+            const imagenData = attributes.Imagen || attributes.imagen || attributes.image || attributes.portada;
+            const imagenUrl = imagenData?.data?.attributes?.url || `/curso${(i % 3) + 1}.png`; // fallback if no image
+
+            return (
+              <div
+                key={i}
+                className="group p-8 rounded-[20px] transition-all hover:-translate-y-2 cursor-pointer flex flex-col justify-end min-h-[450px] relative overflow-hidden shadow-sm hover:shadow-xl"
+                style={{ backgroundImage: `url(${imagenUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' }}
+              >
+                <div className="absolute top-0 right-0 w-32 h-32 premium-gradient opacity-10 rounded-full -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-700"></div>
+                <div className="relative z-10 bg-neutral-100 p-5 rounded-[20px] min-h-[220px] flex flex-col">
+                  <h3 className="text-2xl font-serif text-text mb-1">{titulo}</h3>
+                  {inicio && (
+                    <span className="inline-block bg-primary/10 text-primary text-xs font-bold px-2 py-1 rounded-md mb-3 self-start">
+                      Inicio: {inicio}
+                    </span>
+                  )}
+                  <p className="text-sm text-text-muted mb-6 flex-grow">{descripcion}</p>
+                  <div className="w-10 h-10 rounded-full border border-text/10 flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-all self-end">
+                    →
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          }) : (
+            [
+              { title: "Preparación JLPT", desc: "N5 a N1 con simulacros", Image: "/curso1.png" },
+              { title: "Japonés para niños", desc: "Desde los 6 años", Image: "/curso2.png" },
+              { title: "Japonés Express", desc: "Viajes y negocios", Image: "/curso3.png" }
+            ].map((card, i) => (
+              <div
+                key={i}
+                className="group p-8 rounded-[20px] transition-all hover:-translate-y-2 cursor-pointer flex flex-col justify-end min-h-[450px] relative overflow-hidden shadow-sm hover:shadow-xl"
+                style={{ backgroundImage: `url(${card.Image})`, backgroundSize: 'cover', backgroundPosition: 'center' }}
+              >
+                <div className="absolute top-0 right-0 w-32 h-32 premium-gradient opacity-10 rounded-full -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-700"></div>
+                <div className="relative z-10 bg-neutral-100 p-4 rounded-[20px] min-h-[200px]">
+                  <h3 className="text-2xl font-serif text-text mb-2">{card.title}</h3>
+                  <p className="text-sm text-text-muted mb-6">{card.desc}</p>
+                  <div className="w-10 h-10 rounded-full border border-text/10 flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-all">
+                    →
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
         </div>
       </section>
 

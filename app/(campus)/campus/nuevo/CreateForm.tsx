@@ -60,12 +60,14 @@ export default function CreateForm({ type, endpoint }: { type: string, endpoint:
       )}
 
       <div className="space-y-2">
-        <label className="text-xs font-bold uppercase tracking-widest text-zinc-400">Título</label>
+        <label className="text-xs font-bold uppercase tracking-widest text-zinc-400">
+          {type === 'curso' ? 'Nombre del Curso' : 'Título'}
+        </label>
         <input
-          name="Titulo"
+          name={type === 'curso' ? 'Nombre' : 'Titulo'}
           required
           className="w-full p-4 bg-zinc-50 border border-zinc-100 rounded-xl focus:outline-none focus:border-primary/50 transition-colors"
-          placeholder="Ej: Clase de Caligrafía Japonesa"
+          placeholder={type === 'curso' ? 'Ej: Japonés para niños' : 'Ej: Clase de Caligrafía Japonesa'}
         />
       </div>
 
@@ -131,9 +133,33 @@ export default function CreateForm({ type, endpoint }: { type: string, endpoint:
         </>
       )}
 
+      {type === 'curso' && (
+        <>
+          <div className="space-y-2">
+            <label className="text-xs font-bold uppercase tracking-widest text-zinc-400">Inicio / Fecha</label>
+            <input
+              name="Inicio"
+              required
+              className="w-full p-4 bg-zinc-50 border border-zinc-100 rounded-xl focus:outline-none focus:border-primary/50 transition-colors"
+              placeholder="Ej: Marzo 2027"
+            />
+          </div>
+          <div className="space-y-2">
+            <label className="text-xs font-bold uppercase tracking-widest text-zinc-400">Descripción</label>
+            <textarea
+              name="Descripcion"
+              required
+              rows={3}
+              className="w-full p-4 bg-zinc-50 border border-zinc-100 rounded-xl focus:outline-none focus:border-primary/50 transition-colors"
+              placeholder="Descripción breve del curso..."
+            />
+          </div>
+        </>
+      )}
 
 
-      {type !== 'evento' && type !== 'juego' && (
+
+      {type !== 'evento' && type !== 'juego' && type !== 'curso' && (
         <div className="space-y-2">
           <label className="text-xs font-bold uppercase tracking-widest text-zinc-400">Dirigido a</label>
           <select 
