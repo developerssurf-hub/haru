@@ -21,14 +21,17 @@ export default function CreateForm({ type, endpoint }: { type: string, endpoint:
     });
 
     try {
-      // Usamos una API route interna para manejar el POST a Strapi con el JWT
       const res = await fetch('/api/strapi/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ endpoint, data }),
       });
 
-      if (!res.ok) throw new Error('Error al guardar en Strapi');
+      const result = await res.json();
+
+      if (!res.ok) {
+        throw new Error(result.error || 'Error al guardar en Strapi');
+      }
 
       router.push('/campus');
       router.refresh();
@@ -58,9 +61,9 @@ export default function CreateForm({ type, endpoint }: { type: string, endpoint:
 
       <div className="space-y-2">
         <label className="text-xs font-bold uppercase tracking-widest text-zinc-400">Título</label>
-        <input 
-          name="Titulo" 
-          required 
+        <input
+          name="Titulo"
+          required
           className="w-full p-4 bg-zinc-50 border border-zinc-100 rounded-xl focus:outline-none focus:border-primary/50 transition-colors"
           placeholder="Ej: Clase de Caligrafía Japonesa"
         />
@@ -69,9 +72,9 @@ export default function CreateForm({ type, endpoint }: { type: string, endpoint:
       {type === 'clase' && (
         <div className="space-y-2">
           <label className="text-xs font-bold uppercase tracking-widest text-zinc-400">Link de Zoom / Google Meet</label>
-          <input 
-            name="Link" 
-            required 
+          <input
+            name="Link"
+            required
             className="w-full p-4 bg-zinc-50 border border-zinc-100 rounded-xl focus:outline-none focus:border-primary/50 transition-colors"
             placeholder="https://zoom.us/j/..."
           />
@@ -81,9 +84,9 @@ export default function CreateForm({ type, endpoint }: { type: string, endpoint:
       {type === 'anuncio' && (
         <div className="space-y-2">
           <label className="text-xs font-bold uppercase tracking-widest text-zinc-400">Contenido</label>
-          <textarea 
-            name="Contenido" 
-            required 
+          <textarea
+            name="Contenido"
+            required
             rows={4}
             className="w-full p-4 bg-zinc-50 border border-zinc-100 rounded-xl focus:outline-none focus:border-primary/50 transition-colors"
             placeholder="Escribe el mensaje o pega un link importante..."
@@ -94,16 +97,43 @@ export default function CreateForm({ type, endpoint }: { type: string, endpoint:
       {type === 'evento' && (
         <div className="space-y-2">
           <label className="text-xs font-bold uppercase tracking-widest text-zinc-400">Descripción Corta</label>
-          <input 
-            name="DescripcionCorta" 
-            required 
+          <input
+            name="DescripcionCorta"
+            required
             className="w-full p-4 bg-zinc-50 border border-zinc-100 rounded-xl focus:outline-none focus:border-primary/50 transition-colors"
             placeholder="Ej: Aprende los trazos básicos..."
           />
         </div>
       )}
 
-      {type !== 'evento' && (
+      {type === 'juego' && (
+        <>
+          <div className="space-y-2">
+            <label className="text-xs font-bold uppercase tracking-widest text-zinc-400">Descripción</label>
+            <textarea
+              name="Descripcion"
+              required
+              rows={3}
+              className="w-full p-4 bg-zinc-50 border border-zinc-100 rounded-xl focus:outline-none focus:border-primary/50 transition-colors"
+              placeholder="Descripción del juego..."
+            />
+          </div>
+          <div className="space-y-2">
+            <label className="text-xs font-bold uppercase tracking-widest text-zinc-400">Enlace o Código Iframe (Enable)</label>
+            <textarea
+              name="Enable"
+              required
+              rows={3}
+              className="w-full p-4 bg-zinc-50 border border-zinc-100 rounded-xl focus:outline-none focus:border-primary/50 transition-colors font-mono text-sm"
+              placeholder='https://wordwall.net/... o <iframe src="...">'
+            />
+          </div>
+        </>
+      )}
+
+
+
+      {type !== 'evento' && type !== 'juego' && (
         <div className="space-y-2">
           <label className="text-xs font-bold uppercase tracking-widest text-zinc-400">Dirigido a</label>
           <select 
@@ -118,14 +148,14 @@ export default function CreateForm({ type, endpoint }: { type: string, endpoint:
       )}
 
       <div className="flex gap-4 pt-4">
-        <button 
+        <button
           type="button"
           onClick={() => router.back()}
           className="flex-1 py-4 border border-zinc-200 rounded-xl font-bold text-zinc-500 hover:bg-zinc-50 transition-colors"
         >
           Cancelar
         </button>
-        <button 
+        <button
           type="submit"
           disabled={loading}
           className="flex-[2] py-4 bg-primary text-white rounded-xl font-bold hover:bg-primary-dark transition-colors disabled:opacity-50"

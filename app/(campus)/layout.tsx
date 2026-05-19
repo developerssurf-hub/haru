@@ -7,6 +7,7 @@ import { cookies } from 'next/headers';
 
 const generalLinks = [
   { label: 'Inicio', href: '/campus' },
+  { label: 'Patio de Juegos', href: '/patio-de-juegos' },
 ];
 
 // Static material links removed in favor of dynamic Google Drive content
@@ -50,9 +51,7 @@ export default async function CampusLayout({
       <aside className="w-64 bg-white border-r border-zinc-200 hidden lg:flex flex-col shrink-0">
         {/* Logo */}
         <div className="flex items-center gap-3 px-6 py-5 border-b border-zinc-100">
-          <div className="w-8 h-8 rounded-full premium-gradient flex items-center justify-center">
-            <span className="text-white font-serif text-sm">春</span>
-          </div>
+          <img src="/logo.png" alt="Logo" className='w-10 h-10' />
           <span className="font-serif text-base font-semibold text-[var(--neutral-900)]">
             Campus Haru
           </span>

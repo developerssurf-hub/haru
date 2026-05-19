@@ -29,6 +29,9 @@ export default async function NuevoContenidoPage({
   } else if (type === 'evento') {
     title = 'Nueva Clase Extra / Taller';
     endpoint = 'eventos';
+  } else if (type === 'juego') {
+    title = 'Nuevo Juego';
+    endpoint = 'patio-de-juegos';
   }
 
   return (
