@@ -79,6 +79,16 @@ export default async function CampusLayout({
                   {item.label}
                 </SidebarLink>
               ))}
+              {isDirectora && (
+                <>
+                  <SidebarLink href="/campus/gestion-cursos">
+                    Gestión de Cursos
+                  </SidebarLink>
+                  <SidebarLink href="/campus/gestion-alumnos">
+                    Gestión de Alumnos
+                  </SidebarLink>
+                </>
+              )}
             </div>
           </div>
 

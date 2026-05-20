@@ -7,6 +7,8 @@ import { useRouter } from 'next/navigation';
 export default function CreateForm({ type, endpoint }: { type: string, endpoint: string }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [activo, setActivo] = useState<boolean>(true);
   const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -21,6 +23,28 @@ export default function CreateForm({ type, endpoint }: { type: string, endpoint:
     });
 
     try {
+      let imageId = null;
+      if (imageFile) {
+        const uploadData = new FormData();
+        uploadData.append('files', imageFile);
+        const uploadRes = await fetch('/api/strapi/upload', {
+          method: 'POST',
+          body: uploadData,
+        });
+        const uploadResult = await uploadRes.json();
+        if (!uploadRes.ok) throw new Error(uploadResult.error || 'Error al subir imagen');
+        if (Array.isArray(uploadResult) && uploadResult.length > 0) {
+          imageId = uploadResult[0].id;
+        }
+      }
+
+      if (type === 'curso') {
+        data.Activo = activo;
+        if (imageId) {
+          data.Portada = imageId;
+        }
+      }
+
       const res = await fetch('/api/strapi/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -153,6 +177,24 @@ export default function CreateForm({ type, endpoint }: { type: string, endpoint:
               className="w-full p-4 bg-zinc-50 border border-zinc-100 rounded-xl focus:outline-none focus:border-primary/50 transition-colors"
               placeholder="Descripción breve del curso..."
             />
+          </div>
+          <div className="space-y-2">
+            <label className="text-xs font-bold uppercase tracking-widest text-zinc-400">Imagen</label>
+            <input
+              type="file"
+              accept="image/*"
+              onChange={(e) => setImageFile(e.target.files?.[0] || null)}
+              className="w-full p-4 bg-zinc-50 border border-zinc-100 rounded-xl focus:outline-none focus:border-primary/50 transition-colors"
+            />
+          </div>
+          <div className="flex items-center gap-3">
+            <input
+              type="checkbox"
+              checked={activo}
+              onChange={(e) => setActivo(e.target.checked)}
+              className="w-5 h-5 rounded text-primary focus:ring-primary border-zinc-300"
+            />
+            <label className="text-sm font-bold text-zinc-700">Curso Activo</label>
           </div>
         </>
       )}

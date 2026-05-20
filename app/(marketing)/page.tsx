@@ -1,10 +1,17 @@
 import Image from "next/image";
-import { fetchStrapi } from '@/lib/strapi';
+import { fetchStrapi, getStrapiMedia } from '@/lib/strapi';
+import Link from 'next/link';
 
 export default async function Home() {
   const resCursos = await fetchStrapi('cursos', 'populate=*');
   const cursosRaw = resCursos?.data || [];
-  const cursos = Array.isArray(cursosRaw) ? cursosRaw : (cursosRaw ? [cursosRaw] : []);
+  const cursosAll = Array.isArray(cursosRaw) ? cursosRaw : (cursosRaw ? [cursosRaw] : []);
+  
+  // Only show active courses
+  const cursos = cursosAll.filter((curso: any) => {
+    const attributes = curso.attributes || curso;
+    return attributes.Activo !== false;
+  });
 
   return (
     <div className="flex flex-col gap-24 pb-24">
@@ -72,11 +79,13 @@ export default async function Home() {
             const titulo = attributes.Nombre || attributes.nombre || attributes.Titulo || attributes.titulo || 'Curso';
             const descripcion = attributes.Descripcion || attributes.descripcion || attributes.description || '';
             const inicio = attributes.Inicio || attributes.inicio || attributes.fecha || '';
-            const imagenData = attributes.Imagen || attributes.imagen || attributes.image || attributes.portada;
-            const imagenUrl = imagenData?.data?.attributes?.url || `/curso${(i % 3) + 1}.png`; // fallback if no image
+            const imagenData = attributes.Portada || attributes.Imagen || attributes.imagen || attributes.image || attributes.portada;
+            const rawUrl = imagenData?.url || imagenData?.data?.attributes?.url;
+            const imagenUrl = rawUrl ? getStrapiMedia(rawUrl) : `/curso${(i % 3) + 1}.png`; // fallback if no image
 
             return (
-              <div
+              <Link
+                href={`/cursos/${curso.documentId || curso.id || ''}`}
                 key={i}
                 className="group p-8 rounded-[20px] transition-all hover:-translate-y-2 cursor-pointer flex flex-col justify-end min-h-[450px] relative overflow-hidden shadow-sm hover:shadow-xl"
                 style={{ backgroundImage: `url(${imagenUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' }}
@@ -89,12 +98,12 @@ export default async function Home() {
                       Inicio: {inicio}
                     </span>
                   )}
-                  <p className="text-sm text-text-muted mb-6 flex-grow">{descripcion}</p>
+                  <p className="text-sm text-text-muted mb-6 flex-grow line-clamp-2">{descripcion}</p>
                   <div className="w-10 h-10 rounded-full border border-text/10 flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-all self-end">
                     →
                   </div>
                 </div>
-              </div>
+              </Link>
             );
           }) : (
             [

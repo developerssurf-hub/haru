@@ -44,3 +44,36 @@ export async function postStrapi(endpoint: string, data: any, token: string) {
     return null;
   }
 }
+
+export async function putStrapi(endpoint: string, id: string | number, data: any, token: string) {
+  try {
+    const res = await fetch(`${STRAPI_URL}/api/${endpoint}/${id}`, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ data }),
+    });
+    return await res.json();
+  } catch (error) {
+    console.error('Error putting to Strapi:', error);
+    return null;
+  }
+}
+
+export async function uploadStrapi(formData: FormData, token: string) {
+  try {
+    const res = await fetch(`${STRAPI_URL}/api/upload`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+      body: formData,
+    });
+    return await res.json();
+  } catch (error) {
+    console.error('Error uploading to Strapi:', error);
+    return null;
+  }
+}

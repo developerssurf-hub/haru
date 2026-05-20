@@ -1,10 +1,16 @@
-import { fetchStrapi } from '@/lib/strapi';
+import { fetchStrapi, getStrapiMedia } from '@/lib/strapi';
 import Link from 'next/link';
 
 export default async function CursosPage() {
   const resCursos = await fetchStrapi('cursos', 'populate=*');
   const cursosRaw = resCursos?.data || [];
-  const cursos = Array.isArray(cursosRaw) ? cursosRaw : (cursosRaw ? [cursosRaw] : []);
+  const cursosAll = Array.isArray(cursosRaw) ? cursosRaw : (cursosRaw ? [cursosRaw] : []);
+  
+  // Only show active courses
+  const cursos = cursosAll.filter((curso: any) => {
+    const attributes = curso.attributes || curso;
+    return attributes.Activo !== false;
+  });
 
   return (
     <div className="min-h-screen bg-white">
@@ -33,8 +39,10 @@ export default async function CursosPage() {
                 const titulo = attributes.Nombre || attributes.nombre || attributes.Titulo || attributes.titulo || 'Curso';
                 const descripcion = attributes.Descripcion || attributes.descripcion || attributes.description || '';
                 const inicio = attributes.Inicio || attributes.inicio || attributes.fecha || '';
-                const imagenData = attributes.Imagen || attributes.imagen || attributes.image || attributes.portada;
-                const imagenUrl = imagenData?.data?.attributes?.url || `/curso${(i % 3) + 1}.png`;
+                
+                const imagenData = attributes.Portada || attributes.Imagen || attributes.imagen || attributes.image || attributes.portada;
+                const rawUrl = imagenData?.url || imagenData?.data?.attributes?.url;
+                const imagenUrl = rawUrl ? getStrapiMedia(rawUrl) : `/curso${(i % 3) + 1}.png`;
 
                 return (
                   <div
@@ -50,7 +58,7 @@ export default async function CursosPage() {
                           Inicio: {inicio}
                         </span>
                       )}
-                      <p className="text-sm text-text-muted mb-6 flex-grow leading-relaxed">{descripcion}</p>
+                      <p className="text-sm text-text-muted mb-6 flex-grow leading-relaxed line-clamp-2">{descripcion}</p>
                       
                       {/* Botón de acción */}
                       <Link href={`/cursos/${curso.documentId || curso.id || ''}`} className="w-full py-3 rounded-xl border border-primary/20 text-primary font-bold text-sm flex items-center justify-center gap-2 group-hover:bg-primary group-hover:text-white transition-all">
