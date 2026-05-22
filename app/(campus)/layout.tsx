@@ -59,7 +59,7 @@ export default async function CampusLayout({
     'Nivel I Niños',
     'Nivel II Niños',
     'Estudiante',
-    'Profesor'
+    'Profesor',
   ];
   
   try {

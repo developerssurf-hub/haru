@@ -29,6 +29,7 @@ const STUDENT_ROLES = [
   { name: 'Año V Adultos', label: '5TO AÑO | Adultos' },
   { name: 'Nivel I Niños', label: '1ER NIVEL | Niños' },
   { name: 'Nivel II Niños', label: '2DO NIVEL | Niños' },
+  {name: 'Particulares', label: 'Particulares'},
 ];
 
 interface UserType {
@@ -201,38 +202,24 @@ export default function GestionAlumnosClient({ initialUsers, initialRoles }: Pro
       return;
     }
 
-    const selectedRole = roles.find(r => String(r.id) === formData.roleId);
-    if (selectedRole?.name === 'Particulares' && (!formData.LeccionInicio || !formData.LeccionFin)) {
-      setFormError('Lección Inicio y Lección Fin son campos obligatorios para el rol Particulares.');
-      return;
-    }
-
     setSubmitting(true);
     try {
-      const payload: any = {
-        username: formData.username,
-        email: formData.email,
-        password: formData.password,
-        role: Number(formData.roleId),
-        blocked: !formData.activo,
-        EDAD: formData.EDAD ? Number(formData.EDAD) : null,
-        Documento: formData.Documento,
-        PROVINCIA: formData.PROVINCIA,
-        confirmed: true,
-      };
-
-      // Add Particulares fields if applicable
-      if (selectedRole?.name === 'Particulares') {
-        payload.LeccionInicio = Number(formData.LeccionInicio);
-        payload.LeccionFin = Number(formData.LeccionFin);
-      }
-
       const res = await fetch('/api/admin/users', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({
+          username: formData.username,
+          email: formData.email,
+          password: formData.password,
+          role: Number(formData.roleId),
+          blocked: !formData.activo,
+          EDAD: formData.EDAD ? Number(formData.EDAD) : null,
+          Documento: formData.Documento,
+          PROVINCIA: formData.PROVINCIA,
+          confirmed: true,
+        }),
       });
 
       const result = await res.json();
