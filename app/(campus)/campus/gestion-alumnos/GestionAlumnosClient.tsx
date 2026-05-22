@@ -1,7 +1,6 @@
 'use client';
 
-import { useState, useTransition } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 import { 
   Plus, 
   Pencil, 
@@ -20,17 +19,23 @@ import {
   CheckCircle2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { DEFAULT_CAMPUS_ROLES } from '@/lib/roles';
 
-const STUDENT_ROLES = [
-  { name: 'Año I Adultos', label: '1ER AÑO | Adultos' },
-  { name: 'Año II Adultos', label: '2ER AÑO | Adultos' },
-  { name: 'Año III Adultos', label: '3ER AÑO | Adultos' },
-  { name: 'Año IV Adultos', label: '4TO AÑO | Adultos' },
-  { name: 'Año V Adultos', label: '5TO AÑO | Adultos' },
-  { name: 'Nivel I Niños', label: '1ER NIVEL | Niños' },
-  { name: 'Nivel II Niños', label: '2DO NIVEL | Niños' },
-  {name: 'Particulares', label: 'Particulares'},
-];
+const ROLE_LABELS: Record<string, string> = {
+  'Año I Adultos': '1ER AÑO | Adultos',
+  'Año II Adultos': '2ER AÑO | Adultos',
+  'Año III Adultos': '3ER AÑO | Adultos',
+  'Año IV Adultos': '4TO AÑO | Adultos',
+  'Año V Adultos': '5TO AÑO | Adultos',
+  'Nivel I Niños': '1ER NIVEL | Niños',
+  'Nivel II Niños': '2DO NIVEL | Niños',
+  Particulares: 'Particulares',
+};
+
+const STUDENT_ROLES = DEFAULT_CAMPUS_ROLES.map((name) => ({
+  name,
+  label: ROLE_LABELS[name] ?? name,
+}));
 
 interface UserType {
   id: number;
@@ -40,6 +45,10 @@ interface UserType {
   EDAD?: number | null;
   Documento?: string | null;
   PROVINCIA?: string | null;
+  LeccionInicio?: string | number | null;
+  leccionInicio?: string | number | null;
+  LeccionFin?: string | number | null;
+  leccionFin?: string | number | null;
   role?: {
     id: number;
     name: string;
@@ -58,11 +67,9 @@ interface Props {
 }
 
 export default function GestionAlumnosClient({ initialUsers, initialRoles }: Props) {
-  const router = useRouter();
   const [users, setUsers] = useState<UserType[]>(initialUsers);
   const [roles] = useState<RoleType[]>(initialRoles);
   const [searchTerm, setSearchTerm] = useState('');
-  const [isPending, startTransition] = useTransition();
 
   // Modals state
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -99,6 +106,10 @@ export default function GestionAlumnosClient({ initialUsers, initialRoles }: Pro
     } catch (e) {
       console.error('Error refreshing users:', e);
     }
+  };
+
+  const isParticularesRole = (roleId?: string) => {
+    return roleId ? roles.find((r) => String(r.id) === roleId)?.name === 'Particulares' : false;
   };
 
   // Pre-fill fields for adding new student with a specific role
@@ -152,6 +163,8 @@ export default function GestionAlumnosClient({ initialUsers, initialRoles }: Pro
       PROVINCIA: user.PROVINCIA || '',
       roleId: user.role ? String(user.role.id) : '',
       activo: !user.blocked,
+      LeccionInicio: user.LeccionInicio ? String(user.LeccionInicio) : user.leccionInicio ? String(user.leccionInicio) : '',
+      LeccionFin: user.LeccionFin ? String(user.LeccionFin) : user.leccionFin ? String(user.leccionFin) : '',
     });
     setFormError(null);
     setFormSuccess(null);
@@ -204,22 +217,29 @@ export default function GestionAlumnosClient({ initialUsers, initialRoles }: Pro
 
     setSubmitting(true);
     try {
+      const payload: Record<string, unknown> = {
+        username: formData.username,
+        email: formData.email,
+        password: formData.password,
+        role: Number(formData.roleId),
+        blocked: !formData.activo,
+        EDAD: formData.EDAD ? Number(formData.EDAD) : null,
+        Documento: formData.Documento,
+        PROVINCIA: formData.PROVINCIA,
+        confirmed: true,
+      };
+
+      if (isParticularesRole(formData.roleId)) {
+        payload.LeccionInicio = formData.LeccionInicio ? Number(formData.LeccionInicio) : null;
+        payload.LeccionFin = formData.LeccionFin ? Number(formData.LeccionFin) : null;
+      }
+
       const res = await fetch('/api/admin/users', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          username: formData.username,
-          email: formData.email,
-          password: formData.password,
-          role: Number(formData.roleId),
-          blocked: !formData.activo,
-          EDAD: formData.EDAD ? Number(formData.EDAD) : null,
-          Documento: formData.Documento,
-          PROVINCIA: formData.PROVINCIA,
-          confirmed: true,
-        }),
+        body: JSON.stringify(payload),
       });
 
       const result = await res.json();
@@ -231,8 +251,12 @@ export default function GestionAlumnosClient({ initialUsers, initialRoles }: Pro
         await refreshUsers();
         setTimeout(() => setIsAddModalOpen(false), 800);
       }
-    } catch (err: any) {
-      setFormError(err.message || 'Error de conexión.');
+    } catch (err) {
+      if (err instanceof Error) {
+        setFormError(err.message || 'Error de conexión.');
+      } else {
+        setFormError('Error de conexión.');
+      }
     } finally {
       setSubmitting(false);
     }
@@ -253,7 +277,7 @@ export default function GestionAlumnosClient({ initialUsers, initialRoles }: Pro
 
     setSubmitting(true);
     try {
-      const payload: any = {
+      const payload: Record<string, unknown> = {
         username: formData.username,
         email: formData.email,
         role: Number(formData.roleId),
@@ -265,6 +289,11 @@ export default function GestionAlumnosClient({ initialUsers, initialRoles }: Pro
 
       if (formData.password.trim()) {
         payload.password = formData.password;
+      }
+
+      if (isParticularesRole(formData.roleId)) {
+        payload.LeccionInicio = formData.LeccionInicio ? Number(formData.LeccionInicio) : null;
+        payload.LeccionFin = formData.LeccionFin ? Number(formData.LeccionFin) : null;
       }
 
       const res = await fetch(`/api/admin/users/${selectedUser.id}`, {
@@ -284,8 +313,12 @@ export default function GestionAlumnosClient({ initialUsers, initialRoles }: Pro
         await refreshUsers();
         setTimeout(() => setIsEditModalOpen(false), 800);
       }
-    } catch (err: any) {
-      setFormError(err.message || 'Error de conexión.');
+    } catch (err) {
+      if (err instanceof Error) {
+        setFormError(err.message || 'Error de conexión.');
+      } else {
+        setFormError('Error de conexión.');
+      }
     } finally {
       setSubmitting(false);
     }
@@ -661,7 +694,7 @@ export default function GestionAlumnosClient({ initialUsers, initialRoles }: Pro
                   </div>
 
                   {/* Conditional: Leccion Inicio & Fin for Particulares role */}
-                  {formData.roleId && roles.find(r => String(r.id) === formData.roleId)?.name === 'Particulares' && (
+                  {isParticularesRole(formData.roleId) && (
                     <div className="grid grid-cols-2 gap-4 p-4 bg-blue-50 border border-blue-200 rounded-xl">
                       <div>
                         <label className="block text-xs font-bold text-zinc-500 uppercase tracking-wider mb-1">Lección Inicio</label>
@@ -911,6 +944,37 @@ export default function GestionAlumnosClient({ initialUsers, initialRoles }: Pro
                       ))}
                     </select>
                   </div>
+
+                  {/* Conditional: Leccion Inicio & Fin for Particulares role */}
+                  {isParticularesRole(formData.roleId) && (
+                    <div className="grid grid-cols-2 gap-4 p-4 bg-blue-50 border border-blue-200 rounded-xl">
+                      <div>
+                        <label className="block text-xs font-bold text-zinc-500 uppercase tracking-wider mb-1">Lección Inicio</label>
+                        <div className="relative flex items-center bg-white border border-blue-200 rounded-xl p-3 focus-within:border-blue-500 focus-within:bg-blue-50 transition-all">
+                          <input 
+                            type="number" 
+                            placeholder="Ej. 1"
+                            value={formData.LeccionInicio}
+                            onChange={(e) => setFormData(prev => ({ ...prev, LeccionInicio: e.target.value }))}
+                            className="w-full bg-transparent text-sm outline-none text-[var(--neutral-900)] placeholder-zinc-400"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold text-zinc-500 uppercase tracking-wider mb-1">Lección Fin</label>
+                        <div className="relative flex items-center bg-white border border-blue-200 rounded-xl p-3 focus-within:border-blue-500 focus-within:bg-blue-50 transition-all">
+                          <input 
+                            type="number" 
+                            placeholder="Ej. 10"
+                            value={formData.LeccionFin}
+                            onChange={(e) => setFormData(prev => ({ ...prev, LeccionFin: e.target.value }))}
+                            className="w-full bg-transparent text-sm outline-none text-[var(--neutral-900)] placeholder-zinc-400"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
                   {/* Active Toggle */}
                   <div className="flex items-center justify-between bg-zinc-50 p-4 rounded-xl border border-zinc-200">

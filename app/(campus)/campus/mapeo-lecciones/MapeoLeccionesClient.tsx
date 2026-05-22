@@ -36,6 +36,7 @@ const ACADEMIC_ROLES = [
   { name: 'Nivel I Niños', label: 'Nivel I Niños', category: 'Niños', defaultInicio: 1, defaultFin: 25 },
   { name: 'Nivel II Niños', label: 'Nivel II Niños', category: 'Niños', defaultInicio: 26, defaultFin: 50 },
   { name: 'Particulares', label: 'Particulares (Individual)', category: 'Particulares', defaultInicio: 1, defaultFin: 50 },
+  { name: 'Curso introductorio', label: 'Curso introductorio', category: 'Introductorio', defaultInicio: 1, defaultFin: 50 },
   { name: 'Alumno', label: 'Alumno (General)', category: 'General', defaultInicio: 1, defaultFin: 50 },
 ];
 

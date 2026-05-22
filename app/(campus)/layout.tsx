@@ -4,6 +4,7 @@ import { logoutAction } from '@/app/actions/auth';
 import { fetchStrapi } from '@/lib/strapi';
 import SidebarLink from '@/components/campus/SidebarLink';
 import RoleSwitcher from '@/components/campus/RoleSwitcher';
+import { DEFAULT_CAMPUS_ROLES } from '@/lib/roles';
 import { cookies } from 'next/headers';
 
 const generalLinks = [
@@ -50,17 +51,7 @@ export default async function CampusLayout({
   }
 
   // Fetch roles from Strapi
-  let availableRoles: string[] = [
-    'Año I Adultos',
-    'Año II Adultos',
-    'Año III Adultos',
-    'Año IV Adultos',
-    'Año V Adultos',
-    'Nivel I Niños',
-    'Nivel II Niños',
-    'Estudiante',
-    'Profesor',
-  ];
+  let availableRoles: string[] = DEFAULT_CAMPUS_ROLES;
   
   try {
     const cookieStore = await cookies();

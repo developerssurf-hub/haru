@@ -7,11 +7,13 @@ import { setSimulatedRoleAction } from "@/app/actions/auth";
 interface RoleSwitcherProps {
   currentRole: string;
   availableRoles: string[];
+  label?: string;
 }
 
 export default function RoleSwitcher({
   currentRole,
   availableRoles,
+  label = 'Vista Directora',
 }: RoleSwitcherProps) {
   const [isPending, startTransition] = useTransition();
   const [selected, setSelected] = useState(currentRole);
@@ -30,7 +32,7 @@ export default function RoleSwitcher({
   return (
     <div className="px-6 py-2 bg-zinc-50 border-y border-zinc-100">
       <label className="block text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-1.5">
-        Vista Directora
+        {label}
       </label>
       <div className="relative group">
         <select

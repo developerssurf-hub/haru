@@ -1,6 +1,7 @@
 import { google, drive_v3 } from 'googleapis';
 import { cookies } from 'next/headers';
 import { fetchStrapi } from './strapi';
+import { getLeccionesFolderForRole } from './roles';
 
 // ── Auth ──────────────────────────────────────────────────────────────────────
 
@@ -78,8 +79,8 @@ export async function getLessonFolder(leccionNum: string, levelName?: string): P
   // Construct a query that checks for any of these names
   const nameQuery = namePatterns.map(n => `name = '${n}'`).join(' or ');
 
-  // Find the unified "Lecciones" folder
-  const leccionesFolderId = await getSubfolder(rootId, 'Lecciones');
+  const leccionesFolderName = getLeccionesFolderForRole(levelName);
+  const leccionesFolderId = await getSubfolder(rootId, leccionesFolderName);
   const parentId = leccionesFolderId || rootId;
 
   const res = await drive.files.list({
@@ -122,11 +123,14 @@ export async function getAvailableLessons(levelName?: string): Promise<{ label: 
     'Año V Adultos': { inicio: 41, fin: 50 },
     'Nivel I Niños': { inicio: 1, fin: 25 },
     'Nivel II Niños': { inicio: 26, fin: 50 },
+    'Curso introductorio': { inicio: 1, fin: 50 },
     'Estudiante': { inicio: 1, fin: 50 },
     'Alumno': { inicio: 1, fin: 50 },
     'Profesor': { inicio: 1, fin: 50 },
     'Directora': { inicio: 1, fin: 50 },
   };
+
+  let leccionesFolderName = getLeccionesFolderForRole(levelName);
 
   if (levelName) {
     if (fallbackRanges[levelName]) {
@@ -148,11 +152,16 @@ export async function getAvailableLessons(levelName?: string): Promise<{ label: 
           const fields = item.attributes || item;
           const leccionInicio = fields.LeccionInicio || fields.leccionInicio || fields.Inicio || fields.inicio;
           const leccionFin = fields.LeccionFin || fields.leccionFin || fields.Fin || fields.fin;
+          const carpetaEspecifica = fields.CarpetaEspecifica || fields.carpetaEspecifica || fields.Carpeta || fields.carpeta;
           
           if (typeof leccionInicio === 'number' && typeof leccionFin === 'number') {
             inicio = leccionInicio;
             fin = leccionFin;
             console.log(`DEBUG: Strapi dynamic range loaded for role ${levelName}: [${inicio}, ${fin}]`);
+          }
+          if (carpetaEspecifica && typeof carpetaEspecifica === 'string' && carpetaEspecifica.trim().length > 0) {
+            leccionesFolderName = carpetaEspecifica.trim();
+            console.log(`DEBUG: Strapi mapping provides CarpetaEspecifica='${leccionesFolderName}' for role ${levelName}`);
           }
         }
       }
@@ -167,9 +176,10 @@ export async function getAvailableLessons(levelName?: string): Promise<{ label: 
   const rootId = process.env.DRIVE_ROOT_FOLDER_ID!;
 
   try {
-    // Find the unified "Lecciones" folder
-    const leccionesFolderId = await getSubfolder(rootId, 'Lecciones');
+    console.log(`DEBUG: Attempting to find lessons folder name='${leccionesFolderName}' for role='${levelName}'`);
+    const leccionesFolderId = await getSubfolder(rootId, leccionesFolderName);
     const parentId = leccionesFolderId || rootId;
+    console.log(`DEBUG: Using parentId='${parentId}' (folder='${leccionesFolderName}')`);
 
     const res = await drive.files.list({
       q: `'${parentId}' in parents and trashed = false`,
