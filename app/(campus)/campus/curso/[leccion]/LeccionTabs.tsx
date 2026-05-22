@@ -5,7 +5,7 @@ import type { DriveFile, LessonMeta } from '@/lib/google-drive';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-type TabKey = 'grabaciones' | 'guias' | 'audios' | 'tareas';
+type TabKey = 'guias' | 'audios' | 'tareas';
 
 interface Props {
   leccion: string;
@@ -32,78 +32,6 @@ function formatDate(iso: string | null): string {
 }
 
 // ── Sub-components ────────────────────────────────────────────────────────────
-
-/** Video player list for Grabaciones */
-function GrabacionesList({ files }: { files: DriveFile[] }) {
-  const [selected, setSelected] = useState<DriveFile | null>(files[0] ?? null);
-
-  if (files.length === 0) {
-    return <EmptyState msg="No hay grabaciones disponibles aún." />;
-  }
-
-  return (
-    <div className="flex flex-col lg:flex-row">
-      {/* Player */}
-      {selected && (
-        <div className="flex-1">
-          <div className="aspect-video w-full bg-black rounded-2xl overflow-hidden shadow-md">
-            <iframe
-              src={`https://drive.google.com/file/d/${selected.id}/preview`}
-              allow="autoplay"
-              className="w-full h-full"
-              title={selected.name}
-            />
-          </div>
-          <div className="mt-3">
-            <h3 className="font-semibold text-[var(--neutral-900)] text-base">
-              {selected.name.replace(/\.[^.]+$/, '')}
-            </h3>
-            {selected.description && (
-              <p className="text-sm text-zinc-500 mt-1">{selected.description}</p>
-            )}
-            <p className="text-xs text-zinc-400 mt-1" suppressHydrationWarning>{formatDate(selected.modifiedTime)}</p>
-          </div>
-        </div>
-      )}
-
-      {/* Playlist */}
-      <div className="lg:w-72 flex flex-col gap-2 shrink-0">
-        <p className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-1">
-          {files.length} grabación{files.length !== 1 ? 'es' : ''}
-        </p>
-        {files.map((f) => (
-          <button
-            key={f.id}
-            onClick={() => setSelected(f)}
-            className={`flex items-center gap-3 p-3 rounded-xl text-left transition-colors ${selected?.id === f.id
-              ? 'bg-primary/10 border border-primary/20'
-              : 'bg-zinc-50 hover:bg-zinc-100 border border-transparent'
-              }`}
-          >
-            {/* Thumbnail or icon */}
-            <div className="w-12 h-9 rounded-lg bg-zinc-200 overflow-hidden shrink-0 flex items-center justify-center">
-              {f.thumbnailLink ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={f.thumbnailLink} alt="" className="w-full h-full object-cover" />
-              ) : (
-                <VideoIcon />
-              )}
-            </div>
-            <div className="min-w-0">
-              <p
-                className={`text-sm font-medium truncate ${selected?.id === f.id ? 'text-primary' : 'text-[var(--neutral-900)]'
-                  }`}
-              >
-                {f.name.replace(/\.[^.]+$/, '')}
-              </p>
-              <p className="text-xs text-zinc-400" suppressHydrationWarning>{formatDate(f.modifiedTime)}</p>
-            </div>
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-}
 
 /** PDF list for Guías */
 function GuiasList({ files }: { files: DriveFile[] }) {
@@ -387,14 +315,6 @@ function EmptyState({ msg }: { msg: string }) {
 
 // ── Micro-icons ───────────────────────────────────────────────────────────────
 
-function VideoIcon() {
-  return (
-    <svg className="w-5 h-5 text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 10l4.553-2.069A1 1 0 0121 8.82v6.36a1 1 0 01-1.447.89L15 14M3 8a2 2 0 012-2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z" />
-    </svg>
-  );
-}
-
 function PdfIcon({ active }: { active: boolean }) {
   return (
     <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${active ? 'bg-primary/20' : 'bg-red-50'}`}>
@@ -458,19 +378,17 @@ function Skeleton() {
 // ── Main component ────────────────────────────────────────────────────────────
 
 const TABS: { key: TabKey; label: string }[] = [
-  { key: 'grabaciones', label: 'Grabaciones' },
   { key: 'guias', label: 'Guías' },
   { key: 'audios', label: 'Audios' },
   { key: 'tareas', label: 'Tareas' },
 ];
 
 export default function LeccionTabs({ leccion, meta }: Props) {
-  const [activeTab, setActiveTab] = useState<TabKey>('grabaciones');
+  const [activeTab, setActiveTab] = useState<TabKey>('guias');
   const [files, setFiles] = useState<DriveFile[]>([]);
   const [loading, setLoading] = useState(false);
 
   const folderMap: Record<TabKey, string | null> = {
-    grabaciones: meta.folderIds.grabaciones,
     guias: meta.folderIds.guias,
     audios: meta.folderIds.audios,
     tareas: meta.folderIds.tareas,
@@ -522,7 +440,6 @@ export default function LeccionTabs({ leccion, meta }: Props) {
           <Skeleton />
         ) : (
           <>
-            {activeTab === 'grabaciones' && <GrabacionesList files={files} />}
             {activeTab === 'guias' && <GuiasList files={files} />}
             {activeTab === 'audios' && <AudiosList files={files} />}
           </>

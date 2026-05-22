@@ -1,5 +1,7 @@
 import { getLessonMeta } from '@/lib/google-drive';
-import { getMe, getEffectiveRole } from '@/lib/user';
+import { cookies } from 'next/headers';
+import { fetchStrapi } from '@/lib/strapi';
+import { getEffectiveRole, getMe } from '@/lib/user';
 import LeccionTabs from './LeccionTabs';
 import Image from 'next/image';
 
@@ -26,6 +28,17 @@ export default async function LeccionPage({
     };
   }
 
+  // If role is Particulares, fetch its specific lesson range from the user object
+  let particularesRange: { LeccionInicio: number; LeccionFin: number } | null = null;
+  if (level === 'Particulares') {
+    const user = await getMe();
+    if (user) {
+      const inicio = Number(user.LeccionInicio ?? user.leccionInicio ?? 1);
+      const fin = Number(user.LeccionFin ?? user.leccionFin ?? 1);
+      particularesRange = { LeccionInicio: inicio, LeccionFin: fin };
+    }
+  }
+
   const portadaSrc = meta.portadaId
     ? `/api/drive/portada/${meta.portadaId}`
     : '/tokyo-hero.png'; // fallback while Drive isn't configured
@@ -34,8 +47,18 @@ export default async function LeccionPage({
     meta.description ??
     'Explorá el material de esta lección: grabaciones de clase, guías de estudio, audios de práctica y más.';
 
+  // Show range for Particulares role
+  const particularesBanner = (
+    level === 'Particulares' && particularesRange ? (
+      <div className="bg-blue-50 text-blue-800 p-4 rounded-lg my-4">
+        <p className="font-semibold">Lecciones asignadas: {particularesRange.LeccionInicio} - {particularesRange.LeccionFin}</p>
+      </div>
+    ) : null
+  );
+
   return (
     <div className="flex flex-col gap-2 -mt-8 -mr-8 -ml-8">
+        {particularesBanner}
       {/* ── Hero ─────────────────────────────────────────────────────────── */}
       <div className="relative h-56 md:h-72 overflow-hidden shrink-0">
         <Image

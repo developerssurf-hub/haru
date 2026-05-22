@@ -1,4 +1,6 @@
 import { google, drive_v3 } from 'googleapis';
+import { cookies } from 'next/headers';
+import { fetchStrapi } from './strapi';
 
 // ── Auth ──────────────────────────────────────────────────────────────────────
 
@@ -68,7 +70,7 @@ export async function getLessonFolder(leccionNum: string, levelName?: string): P
   const padded = leccionNum.padStart(2, '0');
   const rootId = process.env.DRIVE_ROOT_FOLDER_ID!;
 
-  console.log(`DEBUG: Searching for lesson folder for number: ${leccionNum}${levelName ? ` in level: ${levelName}` : ''}`);
+  console.log(`DEBUG: Searching for lesson folder for number: ${leccionNum}`);
 
   // We'll search for both Leccion-XX and Lección-XX (and also handle non-padded versions)
   const namePatterns = [`Leccion-${leccionNum}`, `Lección-${leccionNum}`, `Leccion-${padded}`, `Lección-${padded}`];
@@ -76,51 +78,29 @@ export async function getLessonFolder(leccionNum: string, levelName?: string): P
   // Construct a query that checks for any of these names
   const nameQuery = namePatterns.map(n => `name = '${n}'`).join(' or ');
 
-  // 1. If a level is specified, look inside that folder first
-  if (levelName) {
-    const levelId = await getSubfolder(rootId, levelName);
-    if (levelId) {
-      const res = await drive.files.list({
-        q: `'${levelId}' in parents and (${nameQuery}) and mimeType = 'application/vnd.google-apps.folder' and trashed = false`,
-        fields: 'files(id,name,description)',
-        pageSize: 1,
-      });
-      if (res.data.files?.[0]) {
-        console.log(`DEBUG: Found lesson folder inside level folder: ${levelName} -> ${res.data.files[0].name}`);
-        return res.data.files[0];
-      }
-    }
-  }
+  // Find the unified "Lecciones" folder
+  const leccionesFolderId = await getSubfolder(rootId, 'Lecciones');
+  const parentId = leccionesFolderId || rootId;
 
-  // 2. Try Root
   const res = await drive.files.list({
-    q: `'${rootId}' in parents and (${nameQuery}) and mimeType = 'application/vnd.google-apps.folder' and trashed = false`,
+    q: `'${parentId}' in parents and (${nameQuery}) and mimeType = 'application/vnd.google-apps.folder' and trashed = false`,
     fields: 'files(id,name,description)',
     pageSize: 1,
   });
 
-  if (res.data.files?.[0]) return res.data.files[0];
+  if (res.data.files?.[0]) {
+    console.log(`DEBUG: Found lesson folder: ${res.data.files[0].name} in folder ID: ${parentId}`);
+    return res.data.files[0];
+  }
 
-  // 3. Fallback: Search in ALL first-level subfolders of Root
-  console.log('DEBUG: Lesson not found in root or specified level, searching in all subfolders...');
-  const subfoldersRes = await drive.files.list({
-    q: `'${rootId}' in parents and mimeType = 'application/vnd.google-apps.folder' and trashed = false`,
-    fields: 'files(id,name)',
-  });
-
-  for (const folder of (subfoldersRes.data.files ?? [])) {
-    // Avoid re-searching the level we already checked
-    if (levelName && folder.name === levelName) continue;
-
-    const subRes = await drive.files.list({
-      q: `'${folder.id}' in parents and (${nameQuery}) and mimeType = 'application/vnd.google-apps.folder' and trashed = false`,
+  // If not found and we used the "Lecciones" folder, check the root folder just in case
+  if (parentId !== rootId) {
+    const resRoot = await drive.files.list({
+      q: `'${rootId}' in parents and (${nameQuery}) and mimeType = 'application/vnd.google-apps.folder' and trashed = false`,
       fields: 'files(id,name,description)',
       pageSize: 1,
     });
-    if (subRes.data.files?.[0]) {
-      console.log(`DEBUG: Found lesson folder inside ${folder.name} -> ${subRes.data.files[0].name}`);
-      return subRes.data.files[0];
-    }
+    if (resRoot.data.files?.[0]) return resRoot.data.files[0];
   }
 
   return null;
@@ -130,69 +110,95 @@ export async function getLessonFolder(leccionNum: string, levelName?: string): P
  * List all lesson folders inside a specific level folder (e.g. "Nivel I").
  */
 export async function getAvailableLessons(levelName?: string): Promise<{ label: string; href: string }[]> {
-  const drive = getDriveClient();
-  let parentId = process.env.DRIVE_ROOT_FOLDER_ID;
+  let inicio = 1;
+  let fin = 50;
 
-  // If a level is specified, find its folder ID first
+  // Default fallback ranges to make sure it is fully robust
+  const fallbackRanges: Record<string, { inicio: number; fin: number }> = {
+    'Año I Adultos': { inicio: 1, fin: 10 },
+    'Año II Adultos': { inicio: 11, fin: 20 },
+    'Año III Adultos': { inicio: 21, fin: 30 },
+    'Año IV Adultos': { inicio: 31, fin: 40 },
+    'Año V Adultos': { inicio: 41, fin: 50 },
+    'Nivel I Niños': { inicio: 1, fin: 25 },
+    'Nivel II Niños': { inicio: 26, fin: 50 },
+    'Estudiante': { inicio: 1, fin: 50 },
+    'Alumno': { inicio: 1, fin: 50 },
+    'Profesor': { inicio: 1, fin: 50 },
+    'Directora': { inicio: 1, fin: 50 },
+  };
+
   if (levelName) {
-    console.log('DEBUG: Searching for level folder:', levelName);
-    const levelFolderId = await getSubfolder(parentId!, levelName);
-    if (levelFolderId) {
-      console.log('DEBUG: Level folder found ID:', levelFolderId);
-      parentId = levelFolderId;
-    } else {
-      console.warn(`DEBUG: Level folder "${levelName}" not found in Drive. Falling back to root.`);
+    if (fallbackRanges[levelName]) {
+      inicio = fallbackRanges[levelName].inicio;
+      fin = fallbackRanges[levelName].fin;
+    }
+
+    try {
+      const cookieStore = await cookies();
+      const jwt = cookieStore.get('jwt')?.value;
+      
+      // Fetch mapping from Strapi (query mapeo-lecciones dynamically)
+      const resMapping = await fetchStrapi('mapeo-lecciones', `filters[Rol][$eq]=${encodeURIComponent(levelName)}&populate=*`, jwt);
+      
+      if (resMapping && resMapping.data) {
+        const items = Array.isArray(resMapping.data) ? resMapping.data : [resMapping.data];
+        if (items.length > 0) {
+          const item = items[0];
+          const fields = item.attributes || item;
+          const leccionInicio = fields.LeccionInicio || fields.leccionInicio || fields.Inicio || fields.inicio;
+          const leccionFin = fields.LeccionFin || fields.leccionFin || fields.Fin || fields.fin;
+          
+          if (typeof leccionInicio === 'number' && typeof leccionFin === 'number') {
+            inicio = leccionInicio;
+            fin = leccionFin;
+            console.log(`DEBUG: Strapi dynamic range loaded for role ${levelName}: [${inicio}, ${fin}]`);
+          }
+        }
+      }
+    } catch (err) {
+      console.error(`DEBUG: Error fetching mapeo-lecciones for role ${levelName}, using fallback range:`, err);
     }
   }
 
-  console.log('DEBUG: Listing files in parentId:', parentId);
+  console.log(`DEBUG: Listing lessons within range [${inicio}, ${fin}] for role: ${levelName}`);
+
+  const drive = getDriveClient();
+  const rootId = process.env.DRIVE_ROOT_FOLDER_ID!;
 
   try {
+    // Find the unified "Lecciones" folder
+    const leccionesFolderId = await getSubfolder(rootId, 'Lecciones');
+    const parentId = leccionesFolderId || rootId;
+
     const res = await drive.files.list({
       q: `'${parentId}' in parents and trashed = false`,
       fields: 'files(id,name,mimeType)',
       pageSize: 100,
     });
 
-    const allFiles = res.data.files ?? [];
-    console.log('DEBUG: All files in folder:', allFiles.map(f => f.name).join(', '));
-
-    let files = allFiles.filter(f => 
+    let files = res.data.files ?? [];
+    
+    // Filter folders matching "Leccion-XX" / "Lección-XX"
+    let lessons = files.filter(f => 
       (f.name?.toLowerCase().includes('leccion-') || f.name?.toLowerCase().includes('lección-')) && 
       f.mimeType === 'application/vnd.google-apps.folder'
     );
 
-    // Aggressive Fallback: If no lessons found, check if they are in "Nivel I", "Nivel II" or other subfolders
-    if (files.length === 0) {
-      const levelFolders = allFiles.filter(f => 
-        (f.name === 'Nivel I' || f.name === 'Nivel II' || f.name === 'Nivel I Niños' || f.name === 'Nivel II Niños' || f.name === 'Año I Adultos' || f.name === 'Año II Adultos' || f.name === 'Año III Adultos' || f.name === 'Año IV Adultos') && 
+    // If no lessons found inside "Lecciones" folder, check the root folder as fallback
+    if (lessons.length === 0 && parentId !== rootId) {
+      const resRoot = await drive.files.list({
+        q: `'${rootId}' in parents and trashed = false`,
+        fields: 'files(id,name,mimeType)',
+        pageSize: 100,
+      });
+      lessons = (resRoot.data.files ?? []).filter(f => 
+        (f.name?.toLowerCase().includes('leccion-') || f.name?.toLowerCase().includes('lección-')) && 
         f.mimeType === 'application/vnd.google-apps.folder'
       );
-      for (const folder of levelFolders) {
-        console.log(`DEBUG: Aggressive search checking subfolder: ${folder.name}`);
-        const subRes = await drive.files.list({
-          q: `'${folder.id}' in parents and trashed = false`,
-          fields: 'files(id,name,mimeType)',
-        });
-        const subFiles = (subRes.data.files ?? []).filter(f => 
-          (f.name?.toLowerCase().includes('leccion-') || f.name?.toLowerCase().includes('lección-')) && 
-          f.mimeType === 'application/vnd.google-apps.folder'
-        );
-        files = [...files, ...subFiles];
-      }
     }
 
-    // Root Fallback: If we still have nothing and we weren't searching the root
-    if (files.length === 0 && parentId !== process.env.DRIVE_ROOT_FOLDER_ID) {
-      console.log('DEBUG: Final fallback, checking root directly.');
-      const rootRes = await drive.files.list({
-        q: `'${process.env.DRIVE_ROOT_FOLDER_ID}' in parents and (name contains 'Leccion-' or name contains 'Lección-') and mimeType = 'application/vnd.google-apps.folder' and trashed = false`,
-        fields: 'files(id,name)',
-      });
-      files = rootRes.data.files ?? [];
-    }
-
-    return files
+    return lessons
       .map(f => {
         const name = f.name || '';
         const match = name.match(/Lecci[oó]n-(\d+)/i);
@@ -204,7 +210,7 @@ export async function getAvailableLessons(levelName?: string): Promise<{ label: 
           num: num || 0
         };
       })
-      .filter(item => item.num > 0)
+      .filter(item => item.num >= inicio && item.num <= fin)
       .sort((a, b) => a.num - b.num)
       .map(({ label, href }) => ({ label, href }));
 
@@ -267,13 +273,32 @@ export async function getLessonMeta(leccion: string, levelName?: string): Promis
     };
   }
 
-  const [portada, grabacionesId, guiasId, audiosId, tareasId] = await Promise.all([
+  // 1. Fetch portada, guias, audios, tareas from the unified lesson folder
+  const [portada, guiasId, audiosId, tareasId] = await Promise.all([
     getPortada(folder.id),
-    getSubfolder(folder.id, 'Grabaciones'),
     getSubfolder(folder.id, 'Guias'),
     getSubfolder(folder.id, 'Audios'),
     getSubfolder(folder.id, 'Tareas'),
   ]);
+
+  // 2. Fetch grabaciones folder from the role folder
+  let grabacionesId: string | null = null;
+  const rootId = process.env.DRIVE_ROOT_FOLDER_ID!;
+  if (levelName) {
+    const levelFolderId = await getSubfolder(rootId, levelName);
+    if (levelFolderId) {
+      grabacionesId = await getSubfolder(levelFolderId, 'Grabaciones');
+      console.log(`DEBUG: Found level-specific recordings folder for role ${levelName} -> ${grabacionesId}`);
+    }
+  }
+
+  // 3. Backward compatibility fallback: look inside the lesson folder
+  if (!grabacionesId) {
+    grabacionesId = await getSubfolder(folder.id, 'Grabaciones');
+    if (grabacionesId) {
+      console.log(`DEBUG: Level-specific recordings folder not found, using lesson-level recordings -> ${grabacionesId}`);
+    }
+  }
 
   return {
     leccion,
@@ -397,6 +422,62 @@ export async function getAdditionalMaterial(levelName?: string): Promise<{ label
 
   } catch (error) {
     console.error('DEBUG: Error fetching additional material:', error);
+    return [];
+  }
+}
+
+/**
+ * Fetch all files inside the "Grabaciones" subfolder of a level folder.
+ * For "Particulares" role, searches inside /Particulares/{username} instead.
+ */
+export async function getRecordingsForRole(levelName?: string, username?: string): Promise<DriveFile[]> {
+  if (!levelName) return [];
+  const rootId = process.env.DRIVE_ROOT_FOLDER_ID!;
+
+  console.log('DEBUG: Fetching class recordings for level:', levelName);
+
+  try {
+    let grabacionesFolderId: string | null = null;
+
+    // Special handling for "Particulares" role
+    if (levelName === 'Particulares' && username) {
+      console.log('DEBUG: Special handling for Particulares - searching in /Particulares/', username);
+      
+      // Find the "Particulares" folder
+      const particularesFolderId = await getSubfolder(rootId, 'Particulares');
+      if (!particularesFolderId) {
+        console.warn(`DEBUG: "Particulares" folder not found.`);
+        return [];
+      }
+
+      // Find the username folder inside Particulares
+      grabacionesFolderId = await getSubfolder(particularesFolderId, username);
+      if (!grabacionesFolderId) {
+        console.warn(`DEBUG: Username folder "${username}" not found inside Particulares.`);
+        return [];
+      }
+    } else {
+      // Default behavior: look inside level folder
+      // 1. Find level folder
+      const levelFolderId = await getSubfolder(rootId, levelName);
+      if (!levelFolderId) {
+        console.warn(`DEBUG: Level folder "${levelName}" not found.`);
+        return [];
+      }
+
+      // 2. Find "Grabaciones" subfolder
+      grabacionesFolderId = await getSubfolder(levelFolderId, 'Grabaciones');
+      if (!grabacionesFolderId) {
+        console.warn(`DEBUG: "Grabaciones" folder not found inside ${levelName}.`);
+        return [];
+      }
+    }
+
+    // 3. List all files inside
+    return await listFiles(grabacionesFolderId);
+
+  } catch (error) {
+    console.error('DEBUG: Error fetching recordings for role:', error);
     return [];
   }
 }

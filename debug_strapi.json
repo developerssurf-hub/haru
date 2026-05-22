@@ -15,6 +15,8 @@
   "CELULAR": null,
   "MenorDeEdad": null,
   "MAYORACARGO": null,
+  "LeccionInicio": null,
+  "LeccionFin": null,
   "role": {
     "id": 12,
     "documentId": "yu79y6esqdb7kftvuufqsxkl",
@@ -22,7 +24,7 @@
     "description": "Rol para ver toda la plataforma",
     "type": "directora",
     "createdAt": "2026-05-13T01:58:06.092Z",
-    "updatedAt": "2026-05-19T04:41:43.098Z",
+    "updatedAt": "2026-05-21T23:57:19.513Z",
     "publishedAt": "2026-05-13T01:58:06.092Z"
   }
 }

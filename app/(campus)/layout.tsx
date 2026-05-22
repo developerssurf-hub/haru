@@ -1,6 +1,7 @@
 import { getAvailableLessons, getAdditionalMaterial } from '@/lib/google-drive';
 import { getMe, getEffectiveRole } from '@/lib/user';
 import { logoutAction } from '@/app/actions/auth';
+import { fetchStrapi } from '@/lib/strapi';
 import SidebarLink from '@/components/campus/SidebarLink';
 import RoleSwitcher from '@/components/campus/RoleSwitcher';
 import { cookies } from 'next/headers';
@@ -29,12 +30,27 @@ export default async function CampusLayout({
 
   console.log('DEBUG: User detected:', user?.username, 'Actual Role:', actualRole, 'Effective Role:', effectiveRole);
 
-  const lecciones = await getAvailableLessons(effectiveRole);
+  let lecciones = await getAvailableLessons(effectiveRole);
   const materialLinks = await getAdditionalMaterial(effectiveRole);
   console.log('DEBUG: Lessons fetched:', lecciones.length, 'for role:', effectiveRole);
   console.log('DEBUG: Additional material fetched:', materialLinks.length);
 
-  const availableRoles = [
+  // Para el rol Particulares, el rango de lecciones viene del usuario (no del mapeo por rol)
+  if (effectiveRole === 'Particulares' && user) {
+    const inicio = Number(user.LeccionInicio ?? user.leccionInicio ?? 1);
+    const fin = Number(user.LeccionFin ?? user.leccionFin ?? 50);
+    lecciones = lecciones.filter((item) => {
+      // Los hrefs tienen formato /campus/curso/N
+      const match = item.href.match(/(\d+)$/);
+      if (!match) return false;
+      const num = Number(match[1]);
+      return num >= inicio && num <= fin;
+    });
+    console.log(`DEBUG: Particulares – rango del usuario [${inicio}, ${fin}], lecciones filtradas: ${lecciones.length}`);
+  }
+
+  // Fetch roles from Strapi
+  let availableRoles: string[] = [
     'Año I Adultos',
     'Año II Adultos',
     'Año III Adultos',
@@ -45,6 +61,30 @@ export default async function CampusLayout({
     'Estudiante',
     'Profesor'
   ];
+  
+  try {
+    const cookieStore = await cookies();
+    const jwt = cookieStore.get('jwt')?.value;
+    
+    const usersRes = await fetchStrapi('users?pagination[pageSize]=1000&populate=role', '', jwt);
+    const usersArray = usersRes?.data || usersRes;
+    
+    if (Array.isArray(usersArray)) {
+      const rolesSet = new Set<string>();
+      usersArray.forEach((user: any) => {
+        const roleName = user?.role?.name || user?.attributes?.role?.data?.attributes?.name;
+        if (roleName) {
+          rolesSet.add(roleName);
+        }
+      });
+      const uniqueRoles = Array.from(rolesSet).filter((name: string) => name && !['Public', 'Authenticated'].includes(name));
+      if (uniqueRoles.length > 0) {
+        availableRoles = uniqueRoles.sort();
+      }
+    }
+  } catch (error) {
+    // Fallback silencioso a los roles por defecto
+  }
 
   return (
     <div className="min-h-screen bg-[var(--neutral-main)] flex">
@@ -79,6 +119,14 @@ export default async function CampusLayout({
                   {item.label}
                 </SidebarLink>
               ))}
+              <SidebarLink href="/campus/grabaciones">
+                Grabaciones de Clase
+              </SidebarLink>
+              {(actualRole === 'Directora' || actualRole === 'Profesor') && (
+                <SidebarLink href="/campus/mapeo-lecciones">
+                  Mapeo de Lecciones
+                </SidebarLink>
+              )}
               {isDirectora && (
                 <>
                   <SidebarLink href="/campus/gestion-cursos">

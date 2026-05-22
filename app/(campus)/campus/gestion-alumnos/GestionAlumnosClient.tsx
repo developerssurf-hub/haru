@@ -79,6 +79,8 @@ export default function GestionAlumnosClient({ initialUsers, initialRoles }: Pro
     PROVINCIA: '',
     roleId: '',
     activo: true,
+    LeccionInicio: '',
+    LeccionFin: '',
   });
 
   const [formError, setFormError] = useState<string | null>(null);
@@ -110,6 +112,27 @@ export default function GestionAlumnosClient({ initialUsers, initialRoles }: Pro
       PROVINCIA: '',
       roleId: roleObj ? String(roleObj.id) : '',
       activo: true,
+      LeccionInicio: '',
+      LeccionFin: '',
+    });
+    setFormError(null);
+    setFormSuccess(null);
+    setIsAddModalOpen(true);
+  };
+
+  // Open Add modal without preset role (global Add button)
+  const handleOpenAddNew = () => {
+    setFormData({
+      username: '',
+      email: '',
+      password: '',
+      EDAD: '',
+      Documento: '',
+      PROVINCIA: '',
+      roleId: '',
+      activo: true,
+      LeccionInicio: '',
+      LeccionFin: '',
     });
     setFormError(null);
     setFormSuccess(null);
@@ -178,24 +201,38 @@ export default function GestionAlumnosClient({ initialUsers, initialRoles }: Pro
       return;
     }
 
+    const selectedRole = roles.find(r => String(r.id) === formData.roleId);
+    if (selectedRole?.name === 'Particulares' && (!formData.LeccionInicio || !formData.LeccionFin)) {
+      setFormError('Lección Inicio y Lección Fin son campos obligatorios para el rol Particulares.');
+      return;
+    }
+
     setSubmitting(true);
     try {
+      const payload: any = {
+        username: formData.username,
+        email: formData.email,
+        password: formData.password,
+        role: Number(formData.roleId),
+        blocked: !formData.activo,
+        EDAD: formData.EDAD ? Number(formData.EDAD) : null,
+        Documento: formData.Documento,
+        PROVINCIA: formData.PROVINCIA,
+        confirmed: true,
+      };
+
+      // Add Particulares fields if applicable
+      if (selectedRole?.name === 'Particulares') {
+        payload.LeccionInicio = Number(formData.LeccionInicio);
+        payload.LeccionFin = Number(formData.LeccionFin);
+      }
+
       const res = await fetch('/api/admin/users', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          username: formData.username,
-          email: formData.email,
-          password: formData.password,
-          role: Number(formData.roleId),
-          blocked: !formData.activo,
-          EDAD: formData.EDAD ? Number(formData.EDAD) : null,
-          Documento: formData.Documento,
-          PROVINCIA: formData.PROVINCIA,
-          confirmed: true,
-        }),
+        body: JSON.stringify(payload),
       });
 
       const result = await res.json();
@@ -318,24 +355,38 @@ export default function GestionAlumnosClient({ initialUsers, initialRoles }: Pro
       </div>
 
       {/* ── Search Bar ───────────────────────────────────────────── */}
-      <div className="flex items-center gap-3 bg-white p-3 rounded-2xl shadow-sm border border-zinc-100 max-w-md">
-        <Search className="w-5 h-5 text-zinc-400 shrink-0" />
-        <input 
-          type="text" 
-          placeholder="Buscar alumno por nombre, email, DNI o provincia..." 
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="w-full text-sm outline-none text-[var(--neutral-900)] bg-transparent placeholder-zinc-400"
-        />
-        {searchTerm && (
-          <button 
-            onClick={() => setSearchTerm('')} 
-            className="text-zinc-400 hover:text-zinc-600 transition-colors"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        )}
+      <div className="space-y-3 max-w-md">
+        <div className="flex items-center gap-3 bg-white p-3 rounded-2xl shadow-sm border border-zinc-100">
+          <Search className="w-5 h-5 text-zinc-400 shrink-0" />
+          <input 
+            type="text" 
+            placeholder="Buscar alumno por nombre, email, DNI o provincia..." 
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full text-sm outline-none text-[var(--neutral-900)] bg-transparent placeholder-zinc-400"
+          />
+          {searchTerm && (
+            <button 
+              onClick={() => setSearchTerm('')} 
+              className="text-zinc-400 hover:text-zinc-600 transition-colors"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+
+        {/* Add Student Button */}
+        <button
+          onClick={handleOpenAddNew}
+          className="w-full flex items-center justify-center gap-2 bg-[#8e004a] text-white font-semibold py-2.5 px-4 rounded-2xl hover:from-[#3e001d] hover:to-[#8e004a] transition-all transform hover:scale-105 active:scale-95 shadow-md"
+          title="Agregar nuevo alumno a cualquier rol"
+        >
+          <Plus className="w-5 h-5" />
+          Agregar Alumno
+        </button>
       </div>
+
+        
 
       {/* ── Role Groups ──────────────────────────────────────────── */}
       <div className="space-y-12">
@@ -621,6 +672,37 @@ export default function GestionAlumnosClient({ initialUsers, initialRoles }: Pro
                       ))}
                     </select>
                   </div>
+
+                  {/* Conditional: Leccion Inicio & Fin for Particulares role */}
+                  {formData.roleId && roles.find(r => String(r.id) === formData.roleId)?.name === 'Particulares' && (
+                    <div className="grid grid-cols-2 gap-4 p-4 bg-blue-50 border border-blue-200 rounded-xl">
+                      <div>
+                        <label className="block text-xs font-bold text-zinc-500 uppercase tracking-wider mb-1">Lección Inicio</label>
+                        <div className="relative flex items-center bg-white border border-blue-200 rounded-xl p-3 focus-within:border-blue-500 focus-within:bg-blue-50 transition-all">
+                          <input 
+                            type="number" 
+                            placeholder="Ej. 1"
+                            value={formData.LeccionInicio}
+                            onChange={(e) => setFormData(prev => ({ ...prev, LeccionInicio: e.target.value }))}
+                            className="w-full bg-transparent text-sm outline-none text-[var(--neutral-900)] placeholder-zinc-400"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold text-zinc-500 uppercase tracking-wider mb-1">Lección Fin</label>
+                        <div className="relative flex items-center bg-white border border-blue-200 rounded-xl p-3 focus-within:border-blue-500 focus-within:bg-blue-50 transition-all">
+                          <input 
+                            type="number" 
+                            placeholder="Ej. 10"
+                            value={formData.LeccionFin}
+                            onChange={(e) => setFormData(prev => ({ ...prev, LeccionFin: e.target.value }))}
+                            className="w-full bg-transparent text-sm outline-none text-[var(--neutral-900)] placeholder-zinc-400"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
                   {/* Active Toggle */}
                   <div className="flex items-center justify-between bg-zinc-50 p-4 rounded-xl border border-zinc-200">

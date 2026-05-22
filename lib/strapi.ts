@@ -7,11 +7,15 @@ export async function fetchStrapi(endpoint: string, query?: string, token?: stri
       headers['Authorization'] = `Bearer ${token}`;
     }
 
-    const res = await fetch(`${STRAPI_URL}/api/${endpoint}${query ? `?${query}` : ''}`, {
+    const url = `${STRAPI_URL}/api/${endpoint}${query ? `?${query}` : ''}`;
+    const res = await fetch(url, {
       headers,
       cache: 'no-store',
     });
     const data = await res.json();
+    if (!res.ok) {
+      console.error('fetchStrapi error HTTP ' + res.status + ':', url, data);
+    }
     return data;
   } catch (error) {
     console.error('Error fetching from Strapi:', error);
@@ -38,16 +42,22 @@ export async function postStrapi(endpoint: string, data: any, token: string) {
       },
       body: JSON.stringify({ data }),
     });
-    return await res.json();
+    const json = await res.json();
+    if (!res.ok) {
+      console.error(`postStrapi ${endpoint} returned ${res.status}:`, json);
+    }
+    return json;
   } catch (error) {
     console.error('Error posting to Strapi:', error);
     return null;
   }
 }
 
-export async function putStrapi(endpoint: string, id: string | number, data: any, token: string) {
+// Note: Strapi v5 uses documentId (string) as the primary update/delete key.
+// Pass documentId when available, numeric id is kept for backward compat.
+export async function putStrapi(endpoint: string, documentId: string | number, data: any, token: string) {
   try {
-    const res = await fetch(`${STRAPI_URL}/api/${endpoint}/${id}`, {
+    const res = await fetch(`${STRAPI_URL}/api/${endpoint}/${documentId}`, {
       method: 'PUT',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -55,7 +65,11 @@ export async function putStrapi(endpoint: string, id: string | number, data: any
       },
       body: JSON.stringify({ data }),
     });
-    return await res.json();
+    const json = await res.json();
+    if (!res.ok) {
+      console.error(`putStrapi ${endpoint}/${documentId} returned ${res.status}:`, json);
+    }
+    return json;
   } catch (error) {
     console.error('Error putting to Strapi:', error);
     return null;
