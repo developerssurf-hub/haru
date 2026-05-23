@@ -3,9 +3,8 @@ import Link from "next/link";
 export default function Navbar() {
   const navLinks = [
     { name: "Cursos", href: "/cursos" },
-    { name: "Cultura", href: "/cultura" },
     { name: "Blog", href: "/blog" },
-    { name: "About", href: "/about" },
+    { name: "Nosotros", href: "/about" },
   ];
 
   return (

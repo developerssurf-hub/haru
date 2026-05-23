@@ -1,18 +1,10 @@
-import { getAvailableLessons, getAdditionalMaterial } from '@/lib/google-drive';
+import { getAvailableLessons, getAdditionalMaterial, getCampusWorkshops } from '@/lib/google-drive';
 import { getMe, getEffectiveRole } from '@/lib/user';
-import { logoutAction } from '@/app/actions/auth';
 import { fetchStrapi } from '@/lib/strapi';
-import SidebarLink from '@/components/campus/SidebarLink';
-import RoleSwitcher from '@/components/campus/RoleSwitcher';
+import CampusSidebar from '@/components/campus/CampusSidebar';
 import { DEFAULT_CAMPUS_ROLES } from '@/lib/roles';
 import { cookies } from 'next/headers';
-
-const generalLinks = [
-  { label: 'Inicio', href: '/campus' },
-  { label: 'Patio de Juegos', href: '/patio-de-juegos' },
-];
-
-// Static material links removed in favor of dynamic Google Drive content
+import { Suspense } from 'react';
 
 export default async function CampusLayout({
   children,
@@ -32,8 +24,10 @@ export default async function CampusLayout({
   console.log('DEBUG: User detected:', user?.username, 'Actual Role:', actualRole, 'Effective Role:', effectiveRole);
 
   let lecciones = await getAvailableLessons(effectiveRole);
+  const workshopLinks = await getCampusWorkshops();
   const materialLinks = await getAdditionalMaterial(effectiveRole);
   console.log('DEBUG: Lessons fetched:', lecciones.length, 'for role:', effectiveRole);
+  console.log('DEBUG: Campus workshops fetched:', workshopLinks.length);
   console.log('DEBUG: Additional material fetched:', materialLinks.length);
 
   // Para el rol Particulares, el rango de lecciones viene del usuario (no del mapeo por rol)
@@ -79,101 +73,17 @@ export default async function CampusLayout({
 
   return (
     <div className="min-h-screen bg-[var(--neutral-main)] flex">
-      {/* ── Sidebar ─────────────────────────────────────────── */}
-      <aside className="w-64 bg-white border-r border-zinc-200 hidden lg:flex flex-col shrink-0">
-        {/* Logo */}
-        <div className="flex items-center gap-3 px-6 py-5 border-b border-zinc-100">
-          <img src="/logo.png" alt="Logo" className='w-10 h-10' />
-          <span className="font-serif text-base font-semibold text-[var(--neutral-900)]">
-            Campus Haru
-          </span>
-        </div>
-
-        {/* Role Switcher for Directora */}
-        {isDirectora && (
-          <RoleSwitcher
-            currentRole={simulatedRole || 'Año I Adultos'}
-            availableRoles={availableRoles}
-          />
-        )}
-
-        {/* Nav */}
-        <nav className="flex-1 overflow-y-auto py-4 flex flex-col gap-5">
-          {/* General */}
-          <div className="px-4">
-            <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-2 px-2">
-              General
-            </p>
-            <div className="flex flex-col gap-0.5">
-              {generalLinks.map((item) => (
-                <SidebarLink key={item.label} href={item.href}>
-                  {item.label}
-                </SidebarLink>
-              ))}
-              <SidebarLink href="/campus/grabaciones">
-                Grabaciones de Clase
-              </SidebarLink>
-              {(actualRole === 'Directora' || actualRole === 'Profesor') && (
-                <SidebarLink href="/campus/mapeo-lecciones">
-                  Mapeo de Lecciones
-                </SidebarLink>
-              )}
-              {isDirectora && (
-                <>
-                  <SidebarLink href="/campus/gestion-cursos">
-                    Gestión de Cursos
-                  </SidebarLink>
-                  <SidebarLink href="/campus/gestion-alumnos">
-                    Gestión de Alumnos
-                  </SidebarLink>
-                </>
-              )}
-            </div>
-          </div>
-
-          {/* Material */}
-          {materialLinks.length > 0 && (
-            <div className="px-4">
-              <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-2 px-2">
-                Material para cursada
-              </p>
-              <div className="flex flex-col gap-0.5">
-                {materialLinks.map((item) => (
-                  <SidebarLink key={item.label} href={item.href} target="_blank">
-                    {item.label}
-                  </SidebarLink>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Lecciones */}
-          <div className="px-4">
-            <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-2 px-2">
-              Lecciones
-            </p>
-            <div className="flex flex-col gap-0.5">
-              {lecciones.map((item) => (
-                <SidebarLink key={item.label} href={item.href}>
-                  {item.label}
-                </SidebarLink>
-              ))}
-            </div>
-          </div>
-        </nav>
-
-        {/* Bottom actions */}
-        <div className="px-4 py-4 border-t border-zinc-100">
-          <form action={logoutAction}>
-            <button
-              type="submit"
-              className="w-full text-left px-3 py-2 text-sm text-red-500 hover:bg-red-50 transition-colors rounded-lg font-medium"
-            >
-              Cerrar Sesión
-            </button>
-          </form>
-        </div>
-      </aside>
+      <Suspense fallback={<aside className="w-64 bg-white border-r border-zinc-200 hidden lg:block shrink-0" />}>
+        <CampusSidebar
+          isDirectora={isDirectora}
+          simulatedRole={simulatedRole}
+          availableRoles={availableRoles}
+          actualRole={actualRole}
+          workshopLinks={workshopLinks}
+          materialLinks={materialLinks}
+          lecciones={lecciones}
+        />
+      </Suspense>
 
       {/* ── Main column ─────────────────────────────────────── */}
       <div className="flex-1 flex flex-col min-w-0">
@@ -182,7 +92,10 @@ export default async function CampusLayout({
           <h2 className="font-semibold text-sm text-[var(--neutral-700)]">
             Panel del Estudiante
           </h2>
-          <div className="flex items-center gap-3">
+          <a
+            href="/campus/perfil"
+            className="flex items-center gap-3 hover:opacity-80 transition-opacity"
+          >
             <div className="w-8 h-8 rounded-full premium-gradient flex items-center justify-center text-xs font-bold text-white shadow-sm">
               {user?.username?.[0] || 'E'}
             </div>
@@ -194,7 +107,7 @@ export default async function CampusLayout({
                 {isDirectora && simulatedRole ? `${actualRole} (como ${simulatedRole})` : (actualRole || 'Alumno')}
               </span>
             </div>
-          </div>
+          </a>
         </header>
 
         {/* Page content */}

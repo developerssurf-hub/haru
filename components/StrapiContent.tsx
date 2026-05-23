@@ -1,4 +1,5 @@
 import React from 'react';
+import { getStrapiMedia } from '@/lib/strapi';
 
 interface Block {
   type: string;
@@ -53,16 +54,19 @@ export default function StrapiContent({ content }: { content: any }) {
               </ListTag>
             );
 
-          case 'image':
+          case 'image': {
+            const src = getStrapiMedia(block.image?.url ?? null);
+            if (!src) return null;
             return (
               <div key={index} className="my-10 rounded-3xl overflow-hidden shadow-lg">
-                <img 
-                  src={block.image?.url} 
-                  alt={block.image?.alternativeText || 'Image'} 
+                <img
+                  src={src}
+                  alt={block.image?.alternativeText || 'Image'}
                   className="w-full h-auto"
                 />
               </div>
             );
+          }
 
           default:
             return null;

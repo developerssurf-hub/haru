@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 
 interface SidebarLinkProps extends React.AnchorHTMLAttributes<HTMLAnchorElement> {
   href: string;
@@ -10,7 +10,15 @@ interface SidebarLinkProps extends React.AnchorHTMLAttributes<HTMLAnchorElement>
 
 export default function SidebarLink({ href, children, ...props }: SidebarLinkProps) {
   const pathname = usePathname();
-  const isActive = pathname === href;
+  const searchParams = useSearchParams();
+  const [linkPath, linkQuery] = href.split('?');
+
+  let isActive = pathname === linkPath;
+  if (linkQuery) {
+    const expected = new URLSearchParams(linkQuery);
+    isActive =
+      isActive && searchParams.get('archivo') === expected.get('archivo');
+  }
 
   return (
     <Link

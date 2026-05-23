@@ -187,8 +187,14 @@ export default async function Dashboard() {
                 const day = dateObj.getDate().toString().padStart(2, '0');
                 const month = dateObj.toLocaleString('es-ES', { month: 'short' }).replace('.', '');
 
+                const tallerHref = `/campus/taller/${encodeURIComponent(titulo)}`;
+
                 return (
-                  <div key={i} className="flex gap-4 items-center p-4 hover:bg-zinc-50 rounded-2xl transition-colors cursor-pointer border border-transparent hover:border-zinc-100">
+                  <a
+                    key={i}
+                    href={tallerHref}
+                    className="flex gap-4 items-center p-4 hover:bg-zinc-50 rounded-2xl transition-colors cursor-pointer border border-transparent hover:border-zinc-100"
+                  >
                     <div className="w-12 h-12 rounded-xl bg-primary/10 flex flex-col items-center justify-center text-primary shrink-0">
                       <span className="text-[10px] font-bold uppercase">{month}</span>
                       <span className="text-sm font-bold">{day}</span>
@@ -197,7 +203,7 @@ export default async function Dashboard() {
                       <h4 className="font-bold text-sm text-text line-clamp-1">{titulo}</h4>
                       <p className="text-xs text-text-muted line-clamp-1">{desc}</p>
                     </div>
-                  </div>
+                  </a>
                 );
               })
             ) : (

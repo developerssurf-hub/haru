@@ -1,7 +1,7 @@
 import { google, drive_v3 } from 'googleapis';
 import { cookies } from 'next/headers';
 import { fetchStrapi } from './strapi';
-import { getLeccionesFolderForRole } from './roles';
+import { DEFAULT_CAMPUS_ROLES, getLeccionesFolderForRole } from './roles';
 
 // ── Auth ──────────────────────────────────────────────────────────────────────
 
@@ -391,33 +391,193 @@ export async function uploadFile(params: {
   return res.data.id ?? '';
 }
 
-/**
- * List all contents inside the "Material adicional" subfolder of a level folder.
- */
-export async function getAdditionalMaterial(levelName?: string): Promise<{ label: string; href: string }[]> {
-  const drive = getDriveClient();
-  const rootId = process.env.DRIVE_ROOT_FOLDER_ID;
-  
-  if (!levelName || !rootId) return [];
+export interface AdditionalMaterialItem {
+  label: string;
+  href: string;
+  isFolder: boolean;
+  folderId?: string;
+}
 
-  console.log('DEBUG: Fetching additional material for level:', levelName);
+/** Carpeta contenedora de talleres en la raíz de Drive (compartida por todo el campus). */
+export const CAMPUS_WORKSHOPS_FOLDER = 'Talleres adicionales';
+
+/** Subcarpetas del año/nivel que no son talleres (mismo nivel que Lecciones). */
+const LEVEL_SYSTEM_FOLDERS = new Set([
+  'Lecciones',
+  'Lecciones niños',
+  'Grabaciones',
+  'Material adicional',
+  CAMPUS_WORKSHOPS_FOLDER,
+]);
+
+/** Carpetas en la raíz de Drive que no son talleres. */
+const ROOT_SYSTEM_FOLDERS = new Set([
+  ...DEFAULT_CAMPUS_ROLES,
+  ...LEVEL_SYSTEM_FOLDERS,
+  'Particulares',
+  'Directora',
+  'Profesor',
+  'Estudiante',
+  'Alumno',
+]);
+
+function escapeDriveName(name: string): string {
+  return name.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+}
+
+function isLessonFolder(name: string): boolean {
+  return /lecci[oó]n-/i.test(name);
+}
+
+function isSystemLevelFolder(name: string): boolean {
+  return LEVEL_SYSTEM_FOLDERS.has(name) || isLessonFolder(name);
+}
+
+function isSystemRootFolder(name: string): boolean {
+  return ROOT_SYSTEM_FOLDERS.has(name) || isLessonFolder(name);
+}
+
+async function findNamedFolder(parentId: string, folderName: string): Promise<string | null> {
+  const drive = getDriveClient();
+  const escaped = escapeDriveName(folderName);
+
+  const res = await drive.files.list({
+    q: `'${parentId}' in parents and name = '${escaped}' and mimeType = 'application/vnd.google-apps.folder' and trashed = false`,
+    fields: 'files(id)',
+    pageSize: 1,
+  });
+
+  return res.data.files?.[0]?.id ?? null;
+}
+
+/** Carpeta del año/nivel del usuario (ej. "Año I Adultos"). */
+export async function getLevelFolderId(levelName: string): Promise<string | null> {
+  const rootId = process.env.DRIVE_ROOT_FOLDER_ID;
+  if (!levelName || !rootId) return null;
+  return getSubfolder(rootId, levelName);
+}
+
+/**
+ * Carpeta padre de talleres: raíz del campus → "Talleres adicionales", o la raíz misma.
+ */
+export async function getCampusWorkshopsParentId(): Promise<string | null> {
+  const rootId = process.env.DRIVE_ROOT_FOLDER_ID;
+  if (!rootId) return null;
+
+  const containerId = await getSubfolder(rootId, CAMPUS_WORKSHOPS_FOLDER);
+  return containerId ?? rootId;
+}
+
+/**
+ * Busca el taller por nombre: primero en campus (raíz), luego como hermano de Lecciones en el año del usuario.
+ */
+export async function getWorkshopFolderByName(
+  workshopName: string,
+  levelName?: string
+): Promise<string | null> {
+  const campusParentId = await getCampusWorkshopsParentId();
+  if (campusParentId) {
+    const inCampus = await findNamedFolder(campusParentId, workshopName);
+    if (inCampus) return inCampus;
+  }
+
+  const rootId = process.env.DRIVE_ROOT_FOLDER_ID;
+  if (rootId && !isSystemRootFolder(workshopName)) {
+    const atRoot = await findNamedFolder(rootId, workshopName);
+    if (atRoot) return atRoot;
+  }
+
+  if (levelName) {
+    const levelFolderId = await getLevelFolderId(levelName);
+    if (levelFolderId) {
+      const inLevel = await findNamedFolder(levelFolderId, workshopName);
+      if (inLevel) return inLevel;
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Lista archivos dentro de la carpeta del taller (campus o año del usuario).
+ */
+export async function getWorkshopFiles(
+  workshopName: string,
+  levelName?: string
+): Promise<DriveFile[]> {
+  const folderId = await getWorkshopFolderByName(workshopName, levelName);
+  if (!folderId) return [];
+  return listFiles(folderId);
+}
+
+/**
+ * Talleres visibles para todo el campus (carpetas en raíz / "Talleres adicionales").
+ */
+export async function getCampusWorkshops(): Promise<AdditionalMaterialItem[]> {
+  const drive = getDriveClient();
+  const parentId = await getCampusWorkshopsParentId();
+  const rootId = process.env.DRIVE_ROOT_FOLDER_ID;
+
+  if (!parentId || !rootId) return [];
 
   try {
-    // 1. Find level folder
-    const levelFolderId = await getSubfolder(rootId, levelName);
-    if (!levelFolderId) {
-      console.warn(`DEBUG: Level folder "${levelName}" not found.`);
-      return [];
+    const res = await drive.files.list({
+      q: `'${parentId}' in parents and mimeType = 'application/vnd.google-apps.folder' and trashed = false`,
+      fields: 'files(id, name, webViewLink, mimeType)',
+      orderBy: 'name',
+      pageSize: 100,
+    });
+
+    const fromContainer = (res.data.files ?? [])
+      .filter((f) => f.name && !isSystemRootFolder(f.name))
+      .map((f) => ({
+        label: f.name!,
+        href: `/campus/taller/${encodeURIComponent(f.name!)}`,
+        isFolder: true,
+        folderId: f.id ?? undefined,
+      }));
+
+    if (fromContainer.length > 0 || parentId !== rootId) {
+      return fromContainer;
     }
 
-    // 2. Find "Material adicional" subfolder
+    const resRoot = await drive.files.list({
+      q: `'${rootId}' in parents and mimeType = 'application/vnd.google-apps.folder' and trashed = false`,
+      fields: 'files(id, name)',
+      orderBy: 'name',
+      pageSize: 100,
+    });
+
+    return (resRoot.data.files ?? [])
+      .filter((f) => f.name && !isSystemRootFolder(f.name))
+      .map((f) => ({
+        label: f.name!,
+        href: `/campus/taller/${encodeURIComponent(f.name!)}`,
+        isFolder: true,
+        folderId: f.id ?? undefined,
+      }));
+  } catch (error) {
+    console.error('DEBUG: Error fetching campus workshops:', error);
+    return [];
+  }
+}
+
+/**
+ * Material adicional por nivel (PDFs/enlaces en carpeta "Material adicional" del año).
+ */
+export async function getAdditionalMaterial(levelName?: string): Promise<AdditionalMaterialItem[]> {
+  const drive = getDriveClient();
+  const rootId = process.env.DRIVE_ROOT_FOLDER_ID;
+
+  if (!levelName || !rootId) return [];
+
+  try {
+    const levelFolderId = await getLevelFolderId(levelName);
+    if (!levelFolderId) return [];
+
     const materialFolderId = await getSubfolder(levelFolderId, 'Material adicional');
-    if (!materialFolderId) {
-      console.warn(`DEBUG: "Material adicional" folder not found inside ${levelName}.`);
-      return [];
-    }
+    if (!materialFolderId) return [];
 
-    // 3. List all files/folders inside
     const res = await drive.files.list({
       q: `'${materialFolderId}' in parents and trashed = false`,
       fields: 'files(id, name, webViewLink, mimeType)',
@@ -425,11 +585,19 @@ export async function getAdditionalMaterial(levelName?: string): Promise<{ label
       pageSize: 100,
     });
 
-    return (res.data.files ?? []).map(f => ({
-      label: f.name || 'Sin nombre',
-      href: f.webViewLink || '#',
-    }));
+    return (res.data.files ?? []).map((f) => {
+      const name = f.name || 'Sin nombre';
+      const isFolder = f.mimeType === 'application/vnd.google-apps.folder';
 
+      return {
+        label: name,
+        href: isFolder
+          ? `/campus/taller/${encodeURIComponent(name)}`
+          : f.webViewLink || '#',
+        isFolder,
+        folderId: isFolder ? f.id ?? undefined : undefined,
+      };
+    });
   } catch (error) {
     console.error('DEBUG: Error fetching additional material:', error);
     return [];
