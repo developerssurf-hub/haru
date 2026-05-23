@@ -11,7 +11,7 @@ export default async function PatioDeJuegos() {
   const jwt = cookieStore.get('jwt')?.value;
 
   // Fetch patio de juegos
-  const res = await fetchStrapi('patio-de-juegos', 'populate=*', jwt);
+  const res = await fetchStrapi('patio-de-juegos', 'populate=*&pagination[pageSize]=100', jwt);
   const dataRaw = res?.data || [];
   const elementosList = Array.isArray(dataRaw) ? dataRaw : (dataRaw ? [dataRaw] : []);
 
