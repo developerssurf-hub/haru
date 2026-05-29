@@ -26,7 +26,7 @@ export default async function PatioDeJuegos() {
   });
 
   return (
-    <div className="flex flex-col gap-8">
+    <div className="flex flex-col gap-8 mt-10 md:mt-0">
       <div className="flex justify-between items-start">
         <div className="flex flex-col gap-2">
           <h1 className="text-3xl font-serif text-text">Patio de Juegos</h1>

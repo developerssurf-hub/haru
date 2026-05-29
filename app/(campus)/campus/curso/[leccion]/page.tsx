@@ -4,6 +4,7 @@ import { fetchStrapi } from '@/lib/strapi';
 import { getEffectiveRole, getMe } from '@/lib/user';
 import LeccionTabs from './LeccionTabs';
 import Image from 'next/image';
+import LessonListMobile from './LessonListMobile';
 
 export default async function LeccionPage({
   params,
@@ -60,7 +61,7 @@ export default async function LeccionPage({
     <div className="flex flex-col gap-2 -mt-8 -mr-8 -ml-8">
         {particularesBanner}
       {/* ── Hero ─────────────────────────────────────────────────────────── */}
-      <div className="relative h-56 md:h-72 overflow-hidden shrink-0">
+      <div className="relative h-56 md:h-72 overflow-hidden shrink-0 hidden md:block">
         <Image
           src={portadaSrc}
           alt={`Portada de la Lección ${leccion}`}
@@ -88,6 +89,8 @@ export default async function LeccionPage({
 
       {/* ── Tabs + content (client component) ───────────────────────────── */}
       <div className="p-4 overflow-hidden">
+        {/* Mobile lesson list */}
+        <LessonListMobile leccion={leccion} />
         <LeccionTabs leccion={leccion} meta={meta} />
       </div>
     </div>

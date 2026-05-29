@@ -2,13 +2,13 @@
 
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  Play, 
-  Search, 
-  Calendar, 
-  ArrowUpDown, 
-  ExternalLink, 
-  FileVideo, 
+import {
+  Play,
+  Search,
+  Calendar,
+  ArrowUpDown,
+  ExternalLink,
+  FileVideo,
   Info,
   Clock
 } from 'lucide-react';
@@ -55,7 +55,7 @@ export default function GrabacionesClient({ recordings, effectiveRole }: Grabaci
 
   // Filter and Sort recordings
   const filteredRecordings = recordings
-    .filter(rec => 
+    .filter(rec =>
       rec.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (rec.description && rec.description.toLowerCase().includes(searchQuery.toLowerCase()))
     )
@@ -82,8 +82,8 @@ export default function GrabacionesClient({ recordings, effectiveRole }: Grabaci
   // Card motion animation variants
   const cardVariants = {
     hidden: { opacity: 0, y: 30 },
-    show: { 
-      opacity: 1, 
+    show: {
+      opacity: 1,
       y: 0,
       transition: {
         type: 'spring',
@@ -94,7 +94,7 @@ export default function GrabacionesClient({ recordings, effectiveRole }: Grabaci
   };
 
   return (
-    <div className="flex flex-col gap-8 text-reveal">
+    <div className="flex flex-col gap-8 text-reveal mt-10 md:mt-0">
       {/* ── Page Header ─────────────────────────────────────── */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex flex-col gap-2">
@@ -144,7 +144,7 @@ export default function GrabacionesClient({ recordings, effectiveRole }: Grabaci
       {/* ── Dynamic Content / 3-Column Grid ──────────────────── */}
       <AnimatePresence mode="wait">
         {filteredRecordings.length > 0 ? (
-          <motion.div 
+          <motion.div
             variants={containerVariants}
             initial="hidden"
             animate="show"
@@ -160,7 +160,7 @@ export default function GrabacionesClient({ recordings, effectiveRole }: Grabaci
                 <div className="p-6 pb-4 flex flex-col gap-4 relative overflow-hidden shrink-0">
                   {/* Decorative background radial circle */}
                   <div className="absolute top-0 right-0 w-32 h-32 bg-[var(--primary-100)] rounded-full translate-x-12 -translate-y-12 opacity-50 group-hover:scale-110 transition-transform duration-500 ease-out" />
-                  
+
                   <div className="flex items-start justify-between">
                     <div className="w-12 h-12 rounded-2xl bg-[var(--primary-100)] flex items-center justify-center text-[var(--primary-700)] shadow-sm group-hover:bg-[var(--primary-700)] group-hover:text-white transition-all duration-300">
                       <FileVideo className="w-6 h-6 transition-transform duration-300 group-hover:scale-110" />
@@ -232,7 +232,7 @@ export default function GrabacionesClient({ recordings, effectiveRole }: Grabaci
               No se encontraron grabaciones
             </h3>
             <p className="text-sm text-[var(--neutral-500)] max-w-md leading-relaxed">
-              {searchQuery 
+              {searchQuery
                 ? 'No hay clases grabadas que coincidan con tu búsqueda. Intenta con otros términos.'
                 : `Aún no hay videos cargados en la carpeta de "Grabaciones" para tu nivel (${effectiveRole}) en Google Drive.`
               }

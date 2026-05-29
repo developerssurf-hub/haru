@@ -5,6 +5,9 @@ import CampusSidebar from '@/components/campus/CampusSidebar';
 import { DEFAULT_CAMPUS_ROLES } from '@/lib/roles';
 import { cookies } from 'next/headers';
 import { Suspense } from 'react';
+import TopBar from './components/TopBar';
+import BottomNav from './components/BottomNav';
+
 
 export default async function CampusLayout({
   children,
@@ -87,31 +90,13 @@ export default async function CampusLayout({
 
       {/* ── Main column ─────────────────────────────────────── */}
       <div className="flex-1 flex flex-col min-w-0">
-        {/* Top header */}
-        <header className="h-14 bg-white border-b border-zinc-200 flex items-center justify-between px-6 shrink-0">
-          <h2 className="font-semibold text-sm text-[var(--neutral-700)]">
-            Panel del Estudiante
-          </h2>
-          <a
-            href="/campus/perfil"
-            className="flex items-center gap-3 hover:opacity-80 transition-opacity"
-          >
-            <div className="w-8 h-8 rounded-full premium-gradient flex items-center justify-center text-xs font-bold text-white shadow-sm">
-              {user?.username?.[0] || 'E'}
-            </div>
-            <div className="flex flex-col -gap-1 hidden sm:flex">
-              <span className="text-sm font-bold text-[var(--neutral-900)] leading-tight">
-                {user?.username || 'Estudiante'}
-              </span>
-              <span className="text-[10px] font-medium text-primary uppercase tracking-tighter">
-                {isDirectora && simulatedRole ? `${actualRole} (como ${simulatedRole})` : (actualRole || 'Alumno')}
-              </span>
-            </div>
-          </a>
-        </header>
+        <TopBar />
 
         {/* Page content */}
-        <main className="flex-1 p-8 overflow-auto">{children}</main>
+        <main className="flex-1 p-8 overflow-auto pb-16">
+  {children}
+</main>
+<BottomNav />
       </div>
     </div>
   );

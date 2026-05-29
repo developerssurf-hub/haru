@@ -16,6 +16,19 @@ const ALLOWED_FIELDS = [
   'MAYORACARGO',
 ] as const;
 
+export async function GET() {
+  try {
+    const user = await getMe();
+    if (!user) {
+      return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+    }
+    return NextResponse.json(user);
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Error interno';
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+}
+
 export async function PUT(req: Request) {
   try {
     const cookieStore = await cookies();

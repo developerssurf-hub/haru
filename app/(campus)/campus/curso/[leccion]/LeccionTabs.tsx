@@ -33,7 +33,7 @@ function formatDate(iso: string | null): string {
 
 // ── Sub-components ────────────────────────────────────────────────────────────
 
-/** PDF list for Guías */
+/** PDF list for Guías (Desktop) */
 function GuiasList({ files }: { files: DriveFile[] }) {
   const [selected, setSelected] = useState<DriveFile | null>(files[0] ?? null);
 
@@ -107,7 +107,7 @@ function GuiasList({ files }: { files: DriveFile[] }) {
   );
 }
 
-/** Audio player list for Audios */
+/** Audio player list for Audios (Desktop) */
 function AudiosList({ files }: { files: DriveFile[] }) {
   if (files.length === 0) {
     return <EmptyState msg="No hay audios disponibles aún." />;
@@ -155,12 +155,25 @@ function TareasPanel({ leccion }: { leccion: string }) {
   const [dragging, setDragging] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [alumno, setAlumno] = useState('');
+  const [comentarios, setComentarios] = useState('');
   const [status, setStatus] = useState<'idle' | 'uploading' | 'success' | 'error'>('idle');
   const [errorMsg, setErrorMsg] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
 
   const ACCEPTED = '.pdf,.ppt,.pptx';
   const ACCEPTED_LABEL = 'PDF, PPT o PPTX';
+
+  useEffect(() => {
+    fetch('/api/profile')
+      .then((r) => r.json())
+      .then((data) => {
+        if (data && !data.error) {
+          const displayName = data.Nombre || data.username || 'Alumno';
+          setAlumno(displayName);
+        }
+      })
+      .catch((err) => console.error('Error fetching profile for homework name:', err));
+  }, []);
 
   function handleDrop(e: React.DragEvent) {
     e.preventDefault();
@@ -180,6 +193,7 @@ function TareasPanel({ leccion }: { leccion: string }) {
     fd.append('file', file);
     fd.append('leccion', leccion);
     fd.append('alumno', alumno || 'Alumno');
+    fd.append('comentarios', comentarios);
 
     try {
       const res = await fetch('/api/drive/upload', { method: 'POST', body: fd });
@@ -187,6 +201,7 @@ function TareasPanel({ leccion }: { leccion: string }) {
       if (!res.ok) throw new Error(data.error ?? 'Error desconocido');
       setStatus('success');
       setFile(null);
+      setComentarios('');
     } catch (err) {
       setErrorMsg(err instanceof Error ? err.message : 'Error al subir');
       setStatus('error');
@@ -195,7 +210,7 @@ function TareasPanel({ leccion }: { leccion: string }) {
 
   if (status === 'success') {
     return (
-      <div className="flex flex-col items-center gap-4 py-16">
+      <div className="flex flex-col items-center gap-4 py-8 text-center">
         <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center">
           <CheckIcon />
         </div>
@@ -215,18 +230,6 @@ function TareasPanel({ leccion }: { leccion: string }) {
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-6 max-w-xl">
-      <div>
-        <label className="block text-sm font-semibold text-[var(--neutral-900)] mb-2">
-          Tu nombre (para identificar la entrega)
-        </label>
-        <input
-          type="text"
-          value={alumno}
-          onChange={(e) => setAlumno(e.target.value)}
-          placeholder="Ej: María García"
-          className="w-full border border-zinc-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition"
-        />
-      </div>
 
       {/* Drop zone */}
       <div>
@@ -282,6 +285,25 @@ function TareasPanel({ leccion }: { leccion: string }) {
           {errorMsg}
         </p>
       )}
+
+
+      <div>
+        <label className="block text-sm font-semibold text-[var(--neutral-900)] mb-2 font-serif">
+          Comentarios adicionales (opcional)
+        </label>
+        <textarea
+          value={comentarios}
+          onChange={(e) => setComentarios(e.target.value)}
+          placeholder="Escribí aquí cualquier duda o aclaración sobre tu entrega..."
+          rows={3}
+          className="w-full border border-zinc-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition resize-none font-sans"
+        />
+        {alumno && (
+          <p className="text-xs text-zinc-400 mt-1 font-sans">
+            Entregando como: <span className="font-semibold text-zinc-600">{alumno}</span>
+          </p>
+        )}
+      </div>
 
       <button
         type="submit"
@@ -368,9 +390,8 @@ function CheckIcon() {
 function Skeleton() {
   return (
     <div className="flex flex-col gap-4 animate-pulse">
-      <div className="h-48 bg-zinc-100 rounded-2xl" />
-      <div className="h-4 bg-zinc-100 rounded w-2/3" />
-      <div className="h-4 bg-zinc-100 rounded w-1/2" />
+      <div className="h-[76px] bg-zinc-100 rounded-xl" />
+      <div className="h-[76px] bg-zinc-100 rounded-xl" />
     </div>
   );
 }
@@ -385,66 +406,197 @@ const TABS: { key: TabKey; label: string }[] = [
 
 export default function LeccionTabs({ leccion, meta }: Props) {
   const [activeTab, setActiveTab] = useState<TabKey>('guias');
-  const [files, setFiles] = useState<DriveFile[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [guides, setGuides] = useState<DriveFile[]>([]);
+  const [audios, setAudios] = useState<DriveFile[]>([]);
+  const [loadingGuides, setLoadingGuides] = useState(false);
+  const [loadingAudios, setLoadingAudios] = useState(false);
 
-  const folderMap: Record<TabKey, string | null> = {
-    guias: meta.folderIds.guias,
-    audios: meta.folderIds.audios,
-    tareas: meta.folderIds.tareas,
-  };
+  // Mobile active player toggle
+  const [expandedAudio, setExpandedAudio] = useState<string | null>(null);
 
+  // Fetch guides
   useEffect(() => {
-    if (activeTab === 'tareas') return;
-    const folderId = folderMap[activeTab];
+    const folderId = meta?.folderIds?.guias;
     if (!folderId) {
-      setFiles([]);
+      setGuides([]);
       return;
     }
-
-    setLoading(true);
+    setLoadingGuides(true);
     fetch(`/api/drive/files/${folderId}`)
       .then((r) => r.json())
-      .then((data) => setFiles(Array.isArray(data) ? data : []))
-      .catch(() => setFiles([]))
-      .finally(() => setLoading(false));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab]);
+      .then((data) => setGuides(Array.isArray(data) ? data : []))
+      .catch(() => setGuides([]))
+      .finally(() => setLoadingGuides(false));
+  }, [meta?.folderIds?.guias]);
+
+  // Fetch audios
+  useEffect(() => {
+    const folderId = meta?.folderIds?.audios;
+    if (!folderId) {
+      setAudios([]);
+      return;
+    }
+    setLoadingAudios(true);
+    fetch(`/api/drive/files/${folderId}`)
+      .then((r) => r.json())
+      .then((data) => setAudios(Array.isArray(data) ? data : []))
+      .catch(() => setAudios([]))
+      .finally(() => setLoadingAudios(false));
+  }, [meta?.folderIds?.audios]);
 
   return (
-    <div className="flex flex-col gap-0 -m-8">
-      {/* Tab bar */}
-      <div className="bg-white border-b border-zinc-200 px-8 flex gap-1 pt-4 pb-0">
-        {TABS.map((tab) => (
-          <button
-            key={tab.key}
-            onClick={() => setActiveTab(tab.key)}
-            className={`px-5 py-2.5 text-sm font-medium rounded-t-lg transition-colors ${activeTab === tab.key
-              ? 'bg-primary text-white shadow-sm'
-              : 'text-zinc-600 hover:bg-zinc-100'
-              }`}
-          >
-            {tab.label}
-            {tab.key === 'tareas' && (
-              <span className="ml-2 text-xs bg-white/20 rounded-full px-1.5 py-0.5">↑</span>
-            )}
-          </button>
-        ))}
+    <>
+      {/* ── Desktop View (Tabs) ─────────────────────────────────────────── */}
+      <div className="hidden md:flex flex-col gap-0 -m-8">
+        {/* Tab bar */}
+        <div className="bg-white border-b border-zinc-200 px-8 flex gap-1 pt-4 pb-0">
+          {TABS.map((tab) => (
+            <button
+              key={tab.key}
+              onClick={() => setActiveTab(tab.key)}
+              className={`px-5 py-2.5 text-sm font-medium rounded-t-lg transition-colors ${activeTab === tab.key
+                ? 'bg-primary text-white shadow-sm'
+                : 'text-zinc-600 hover:bg-zinc-100'
+                }`}
+            >
+              {tab.label}
+              {tab.key === 'tareas' && (
+                <span className="ml-2 text-xs bg-white/20 rounded-full px-1.5 py-0.5">↑</span>
+              )}
+            </button>
+          ))}
+        </div>
+
+        {/* Tab content */}
+        <div className="p-8 bg-[var(--neutral-main)] flex-1 min-h-[400px]">
+          {activeTab === 'tareas' ? (
+            <TareasPanel leccion={leccion} />
+          ) : activeTab === 'guias' ? (
+            loadingGuides ? <Skeleton /> : <GuiasList files={guides} />
+          ) : (
+            loadingAudios ? <Skeleton /> : <AudiosList files={audios} />
+          )}
+        </div>
       </div>
 
-      {/* Tab content */}
-      <div className="p-8 bg-[var(--neutral-main)] flex-1 min-h-[400px]">
-        {activeTab === 'tareas' ? (
-          <TareasPanel leccion={leccion} />
-        ) : loading ? (
-          <Skeleton />
-        ) : (
-          <>
-            {activeTab === 'guias' && <GuiasList files={files} />}
-            {activeTab === 'audios' && <AudiosList files={files} />}
-          </>
-        )}
+      {/* ── Mobile View (Beautiful Figma-style list layout) ─────────────── */}
+      <div className="flex flex-col gap-6 md:hidden px-2 pt-2 pb-8">
+        {/* Portada Card */}
+        <div className="relative h-[130px] rounded-2xl overflow-hidden shadow-md flex flex-col justify-end p-5">
+          <img
+            alt={`Portada de la Lección ${leccion}`}
+            className="absolute inset-0 object-cover w-full h-full"
+            src={meta.portadaId ? `/api/drive/portada/${meta.portadaId}` : '/tokyo-hero.png'}
+          />
+          <div className="absolute inset-0" style={{ backgroundImage: "linear-gradient(16.5295deg, rgba(0, 0, 0, 0.79) 28.377%, rgba(0, 0, 0, 0) 62.344%)" }} />
+
+          <div className="relative z-10">
+            <h2 className="text-xl font-bold font-serif text-white">Lección {leccion}</h2>
+            <p className="text-white/80 text-[11px] font-sans line-clamp-2 mt-1 leading-relaxed">
+              {meta.description ?? 'Explorá el material de esta lección: grabaciones de clase, guías de estudio, audios de práctica y más.'}
+            </p>
+          </div>
+        </div>
+
+        {/* Guías Section */}
+        <div>
+          <p className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-2 font-serif">
+            {guides.length} Guía{guides.length !== 1 ? 's' : ''}
+          </p>
+          {loadingGuides ? (
+            <Skeleton />
+          ) : guides.length === 0 ? (
+            <p className="text-sm text-zinc-400 italic">No hay guías disponibles aún.</p>
+          ) : (
+            <div className="flex flex-col gap-1.5">
+              {guides.map((f) => (
+                <a
+                  key={f.id}
+                  href={`https://drive.google.com/file/d/${f.id}/preview`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="bg-white rounded-xl border border-zinc-100 p-4 flex items-center justify-between shadow-sm active:bg-zinc-50 transition"
+                >
+                  <div className="min-w-0 pr-4">
+                    <h4 className="font-serif font-medium text-[var(--primary-900)] text-base truncate">
+                      {f.name.replace(/\.pdf$/i, '')}
+                    </h4>
+                    <p className="text-[10px] text-zinc-400 font-sans mt-0.5">{formatBytes(f.size)}</p>
+                  </div>
+                  <svg className="w-5 h-5 text-primary shrink-0 active:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </a>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Audios Section */}
+        <div>
+          <p className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-2 font-serif">
+            {audios.length} Audio{audios.length !== 1 ? 's' : ''}
+          </p>
+          {loadingAudios ? (
+            <Skeleton />
+          ) : audios.length === 0 ? (
+            <p className="text-sm text-zinc-400 italic">No hay audios disponibles aún.</p>
+          ) : (
+            <div className="flex flex-col gap-1.5">
+              {audios.map((f) => {
+                const isExpanded = expandedAudio === f.id;
+                return (
+                  <div
+                    key={f.id}
+                    className="bg-white rounded-xl border border-zinc-100 p-4 shadow-sm flex flex-col transition"
+                  >
+                    <button
+                      onClick={() => setExpandedAudio(isExpanded ? null : f.id)}
+                      className="flex items-center justify-between w-full text-left"
+                    >
+                      <div className="min-w-0 pr-4">
+                        <h4 className="font-serif font-medium text-[var(--primary-900)] text-base truncate">
+                          {f.name.replace(/\.[^.]+$/, '')}
+                        </h4>
+                        <p className="text-[10px] text-zinc-400 font-sans mt-0.5">{formatBytes(f.size)}</p>
+                      </div>
+                      <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary shrink-0 active:scale-90 transition-transform">
+                        <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
+                          {isExpanded ? (
+                            <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
+                          ) : (
+                            <path d="M8 5v14l11-7z" />
+                          )}
+                        </svg>
+                      </div>
+                    </button>
+                    {isExpanded && (
+                      <div className="mt-3 pt-3 border-t border-zinc-100 w-full overflow-hidden">
+                        <iframe
+                          src={`https://drive.google.com/file/d/${f.id}/preview`}
+                          className="w-full h-[60px] rounded-lg"
+                          title={f.name}
+                          allow="autoplay"
+                        />
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Tareas Section */}
+        <div>
+          <p className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-2 font-serif">
+            Entregar Tareas
+          </p>
+          <div className="bg-white rounded-xl border border-zinc-100 p-5 shadow-sm">
+            <TareasPanel leccion={leccion} />
+          </div>
+        </div>
       </div>
-    </div>
+    </>
   );
 }
