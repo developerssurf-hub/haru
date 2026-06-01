@@ -10,12 +10,14 @@ export const DEFAULT_CAMPUS_ROLES = [
   'Estudiante',
   'Profesor',
   'Particulares',
+  'niños 1 er nivel ( junio)'
 ];
 
 /** Carpeta de lecciones en Drive por rol (temporal hasta configurar Strapi). */
 const ROLE_LECCIONES_FOLDER: Record<string, string> = {
   'Nivel I Niños': 'Lecciones niños',
   'Nivel II Niños': 'Lecciones niños',
+  'niños 1 er nivel ( junio)': 'Lecciones niños',
   'Curso introductorio': 'Curso introductorio',
 };
 

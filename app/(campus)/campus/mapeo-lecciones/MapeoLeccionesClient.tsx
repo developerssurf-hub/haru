@@ -1,13 +1,13 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { 
-  AlertCircle, 
-  CheckCircle2, 
-  Loader2, 
-  Save, 
-  Sliders, 
-  GraduationCap, 
+import {
+  AlertCircle,
+  CheckCircle2,
+  Loader2,
+  Save,
+  Sliders,
+  GraduationCap,
   Info,
   RefreshCw
 } from 'lucide-react';
@@ -34,6 +34,7 @@ const ACADEMIC_ROLES = [
   { name: 'Año IV Adultos', label: 'Año IV Adultos', category: 'Adultos', defaultInicio: 31, defaultFin: 40 },
   { name: 'Año V Adultos', label: 'Año V Adultos', category: 'Adultos', defaultInicio: 41, defaultFin: 50 },
   { name: 'Nivel I Niños', label: 'Nivel I Niños', category: 'Niños', defaultInicio: 1, defaultFin: 25 },
+  { name: 'niños 1 er nivel ( junio)', label: 'Nivel I Niños (Junio)', category: 'Niños', defaultInicio: 1, defaultFin: 25 },
   { name: 'Nivel II Niños', label: 'Nivel II Niños', category: 'Niños', defaultInicio: 26, defaultFin: 50 },
   { name: 'Particulares', label: 'Particulares (Individual)', category: 'Particulares', defaultInicio: 1, defaultFin: 50 },
   { name: 'Curso introductorio', label: 'Curso introductorio', category: 'Introductorio', defaultInicio: 1, defaultFin: 50 },
@@ -207,10 +208,10 @@ export default function MapeoLeccionesClient({
       if (stored) {
         list = JSON.parse(stored) as StrapiMapping[];
       }
-      
+
       const idx = list.findIndex(m => m.Rol === updatedMapping.Rol);
       const payload = { ...updatedMapping, isLocalOnly: true };
-      
+
       if (idx !== -1) {
         list[idx] = payload;
       } else {
@@ -308,7 +309,7 @@ export default function MapeoLeccionesClient({
           const category = roleMeta?.category || 'General';
           const errorMsg = errorMessages[mapping.Rol];
           const loadState = loadingStates[mapping.Rol] || 'idle';
-          
+
           const inicio = mapping.LeccionInicio;
           const fin = mapping.LeccionFin;
           const isValid = inicio <= fin;
@@ -376,13 +377,13 @@ export default function MapeoLeccionesClient({
                         }}
                       />
                     )}
-                    
+
                     {/* Visual Segment Markers */}
-                    <div 
+                    <div
                       className="absolute w-2.5 h-2.5 bg-white border border-pink-500 rounded-full top-1/2 -translate-y-1/2 -translate-x-1/2 transition-all duration-300 shadow-sm z-10"
                       style={{ left: `${trackLeft}%` }}
                     />
-                    <div 
+                    <div
                       className="absolute w-2.5 h-2.5 bg-white border border-[var(--primary-700)] rounded-full top-1/2 -translate-y-1/2 -translate-x-1/2 transition-all duration-300 shadow-sm z-10"
                       style={{ left: `${trackLeft + trackWidth}%` }}
                     />
@@ -448,23 +449,22 @@ export default function MapeoLeccionesClient({
                 <button
                   disabled={!isValid || loadState === 'loading'}
                   onClick={() => handleSave(mapping.Rol)}
-                  className={`w-full py-2.5 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 transition-all duration-200 ${
-                    !isValid
-                      ? 'bg-zinc-100 text-zinc-400 cursor-not-allowed border border-zinc-200/50'
-                      : loadState === 'loading'
+                  className={`w-full py-2.5 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 transition-all duration-200 ${!isValid
+                    ? 'bg-zinc-100 text-zinc-400 cursor-not-allowed border border-zinc-200/50'
+                    : loadState === 'loading'
                       ? 'bg-zinc-100 text-zinc-500 cursor-wait border border-zinc-200/50'
                       : loadState === 'success'
-                      ? 'bg-emerald-500 text-white shadow-sm border border-emerald-500 scale-[0.98]'
-                      : loadState === 'error'
-                      ? 'bg-red-500 text-white shadow-sm border border-red-500'
-                      : 'premium-gradient text-white shadow-sm hover:shadow-md hover:scale-[1.01] active:scale-[0.99] border border-transparent'
-                  }`}
+                        ? 'bg-emerald-500 text-white shadow-sm border border-emerald-500 scale-[0.98]'
+                        : loadState === 'error'
+                          ? 'bg-red-500 text-white shadow-sm border border-red-500'
+                          : 'premium-gradient text-white shadow-sm hover:shadow-md hover:scale-[1.01] active:scale-[0.99] border border-transparent'
+                    }`}
                 >
                   {loadState === 'loading' && <Loader2 className="w-4 h-4 animate-spin" />}
                   {loadState === 'success' && <CheckCircle2 className="w-4 h-4 animate-bounce" />}
                   {loadState === 'error' && <AlertCircle className="w-4 h-4" />}
                   {loadState === 'idle' && <Save className="w-4 h-4" />}
-                  
+
                   {loadState === 'loading' && 'Guardando...'}
                   {loadState === 'success' && '¡Mapeo Guardado!'}
                   {loadState === 'error' && 'Error al Guardar'}

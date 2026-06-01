@@ -7,7 +7,7 @@ import { DEFAULT_CAMPUS_ROLES, getLeccionesFolderForRole } from './roles';
 
 function getAuth() {
   let privateKey = process.env.GOOGLE_PRIVATE_KEY || '';
-  
+
   // Limpieza agresiva: quitar comillas dobles o simples al inicio/fin y espacios
   privateKey = privateKey.replace(/^["']|["']$/g, '').trim();
   // Reemplazar saltos de línea escapados por reales (soporta doble escape de Hostinger)
@@ -75,7 +75,7 @@ export async function getLessonFolder(leccionNum: string, levelName?: string): P
 
   // We'll search for both Leccion-XX and Lección-XX (and also handle non-padded versions)
   const namePatterns = [`Leccion-${leccionNum}`, `Lección-${leccionNum}`, `Leccion-${padded}`, `Lección-${padded}`];
-  
+
   // Construct a query that checks for any of these names
   const nameQuery = namePatterns.map(n => `name = '${n}'`).join(' or ');
 
@@ -123,6 +123,7 @@ export async function getAvailableLessons(levelName?: string): Promise<{ label: 
     'Año V Adultos': { inicio: 41, fin: 50 },
     'Nivel I Niños': { inicio: 1, fin: 25 },
     'Nivel II Niños': { inicio: 26, fin: 50 },
+    'niños 1 er nivel ( junio)': { inicio: 1, fin: 25 },
     'Curso introductorio': { inicio: 1, fin: 50 },
     'Estudiante': { inicio: 1, fin: 50 },
     'Alumno': { inicio: 1, fin: 50 },
@@ -141,10 +142,10 @@ export async function getAvailableLessons(levelName?: string): Promise<{ label: 
     try {
       const cookieStore = await cookies();
       const jwt = cookieStore.get('jwt')?.value;
-      
+
       // Fetch mapping from Strapi (query mapeo-lecciones dynamically)
       const resMapping = await fetchStrapi('mapeo-lecciones', `filters[Rol][$eq]=${encodeURIComponent(levelName)}&populate=*`, jwt);
-      
+
       if (resMapping && resMapping.data) {
         const items = Array.isArray(resMapping.data) ? resMapping.data : [resMapping.data];
         if (items.length > 0) {
@@ -153,7 +154,7 @@ export async function getAvailableLessons(levelName?: string): Promise<{ label: 
           const leccionInicio = fields.LeccionInicio || fields.leccionInicio || fields.Inicio || fields.inicio;
           const leccionFin = fields.LeccionFin || fields.leccionFin || fields.Fin || fields.fin;
           const carpetaEspecifica = fields.CarpetaEspecifica || fields.carpetaEspecifica || fields.Carpeta || fields.carpeta;
-          
+
           if (typeof leccionInicio === 'number' && typeof leccionFin === 'number') {
             inicio = leccionInicio;
             fin = leccionFin;
@@ -188,10 +189,10 @@ export async function getAvailableLessons(levelName?: string): Promise<{ label: 
     });
 
     let files = res.data.files ?? [];
-    
+
     // Filter folders matching "Leccion-XX" / "Lección-XX"
-    let lessons = files.filter(f => 
-      (f.name?.toLowerCase().includes('leccion-') || f.name?.toLowerCase().includes('lección-')) && 
+    let lessons = files.filter(f =>
+      (f.name?.toLowerCase().includes('leccion-') || f.name?.toLowerCase().includes('lección-')) &&
       f.mimeType === 'application/vnd.google-apps.folder'
     );
 
@@ -202,8 +203,8 @@ export async function getAvailableLessons(levelName?: string): Promise<{ label: 
         fields: 'files(id,name,mimeType)',
         pageSize: 100,
       });
-      lessons = (resRoot.data.files ?? []).filter(f => 
-        (f.name?.toLowerCase().includes('leccion-') || f.name?.toLowerCase().includes('lección-')) && 
+      lessons = (resRoot.data.files ?? []).filter(f =>
+        (f.name?.toLowerCase().includes('leccion-') || f.name?.toLowerCase().includes('lección-')) &&
         f.mimeType === 'application/vnd.google-apps.folder'
       );
     }
@@ -620,7 +621,7 @@ export async function getRecordingsForRole(levelName?: string, username?: string
     // Special handling for "Particulares" role
     if (levelName === 'Particulares' && username) {
       console.log('DEBUG: Special handling for Particulares - searching in /Particulares/', username);
-      
+
       // Find the "Particulares" folder
       const particularesFolderId = await getSubfolder(rootId, 'Particulares');
       if (!particularesFolderId) {
