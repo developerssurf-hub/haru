@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 import { getUserRole } from '@/lib/user';
 import { cookies } from 'next/headers';
 import { fetchStrapi } from '@/lib/strapi';
+import { getProgramasAction } from '@/app/actions/mapeo';
 import MapeoLeccionesClient from './MapeoLeccionesClient';
 
 export const metadata = {
@@ -22,6 +23,7 @@ export default async function MapeoLeccionesPage() {
 
   if (!jwt) redirect('/login');
 
+  // ── Mappings legacy (por rol) ──────────────────────────────────────────────
   let mappings: {
     id?: number;
     documentId?: string;
@@ -42,11 +44,10 @@ export default async function MapeoLeccionesPage() {
         : [];
 
       mappings = rawData.map((item: any) => {
-        // Strapi v5: flat data, no attributes wrapper; v4 keeps attributes
         const attrs = item.attributes || item;
         return {
           id: item.id,
-          documentId: item.documentId || String(item.id), // v5 key
+          documentId: item.documentId || String(item.id),
           Rol: attrs.Rol ?? attrs.rol ?? '',
           LeccionInicio: Number(attrs.LeccionInicio ?? attrs.leccionInicio ?? attrs.Inicio ?? attrs.inicio ?? 1),
           LeccionFin: Number(attrs.LeccionFin ?? attrs.leccionFin ?? attrs.Fin ?? attrs.fin ?? 50),
@@ -61,10 +62,32 @@ export default async function MapeoLeccionesPage() {
     isStrapiDown = true;
   }
 
+  // ── Programas (nuevo sistema) ──────────────────────────────────────────────
+  // Si Strapi ya está caído, no intentamos cargar programas (ya sabemos que fallará)
+  let programas: {
+    id: number;
+    documentId: string;
+    nombre: string;
+    folder: string;
+    mapeoLecciones: { id: number; documentId: string; LeccionInicio: number; LeccionFin: number } | null;
+  }[] = [];
+
+  if (!isStrapiDown) {
+    try {
+      const progRes = await getProgramasAction();
+      if (progRes.success && progRes.data) {
+        programas = progRes.data as typeof programas;
+      }
+    } catch (error) {
+      console.warn("DEBUG MapeoLeccionesPage: Could not load programas:", error);
+    }
+  }
+
   return (
     <MapeoLeccionesClient
       initialMappings={mappings}
       initialIsStrapiDown={isStrapiDown}
+      programas={programas}
     />
   );
 }

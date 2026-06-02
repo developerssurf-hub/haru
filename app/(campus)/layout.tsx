@@ -2,7 +2,7 @@ import { getAvailableLessons, getAdditionalMaterial, getCampusWorkshops } from '
 import { getMe, getEffectiveRole } from '@/lib/user';
 import { fetchStrapi } from '@/lib/strapi';
 import CampusSidebar from '@/components/campus/CampusSidebar';
-import { DEFAULT_CAMPUS_ROLES } from '@/lib/roles';
+import { DEFAULT_CAMPUS_ROLES, buildLevelConfig } from '@/lib/roles';
 import { cookies } from 'next/headers';
 import { Suspense } from 'react';
 import TopBar from './components/TopBar';
@@ -25,27 +25,16 @@ export default async function CampusLayout({
   const isDirectora = actualRole === 'Directora';
 
   console.log('DEBUG: User detected:', user?.username, 'Actual Role:', actualRole, 'Effective Role:', effectiveRole);
+  console.log('DEBUG: User programa:', user?.programa ? user.programa.nombre : 'ninguno (legacy)');
 
-  let lecciones = await getAvailableLessons(effectiveRole);
+  // Construir la configuración de nivel unificada (programa o rol)
+  const levelConfig = buildLevelConfig(user, effectiveRole);
+  console.log(`DEBUG: LevelConfig -> nombre='${levelConfig.nombre}' folder='${levelConfig.folder}' rango=[${levelConfig.leccionInicio}-${levelConfig.leccionFin}] source=${levelConfig.source}`);
+
+  let lecciones = await getAvailableLessons(levelConfig);
   const workshopLinks = await getCampusWorkshops();
-  const materialLinks = await getAdditionalMaterial(effectiveRole);
-  console.log('DEBUG: Lessons fetched:', lecciones.length, 'for role:', effectiveRole);
-  console.log('DEBUG: Campus workshops fetched:', workshopLinks.length);
-  console.log('DEBUG: Additional material fetched:', materialLinks.length);
-
-  // Para el rol Particulares, el rango de lecciones viene del usuario (no del mapeo por rol)
-  if (effectiveRole === 'Particulares' && user) {
-    const inicio = Number(user.LeccionInicio ?? user.leccionInicio ?? 1);
-    const fin = Number(user.LeccionFin ?? user.leccionFin ?? 50);
-    lecciones = lecciones.filter((item) => {
-      // Los hrefs tienen formato /campus/curso/N
-      const match = item.href.match(/(\d+)$/);
-      if (!match) return false;
-      const num = Number(match[1]);
-      return num >= inicio && num <= fin;
-    });
-    console.log(`DEBUG: Particulares – rango del usuario [${inicio}, ${fin}], lecciones filtradas: ${lecciones.length}`);
-  }
+  const materialLinks = await getAdditionalMaterial(levelConfig);
+  console.log('DEBUG: Lessons fetched:', lecciones.length, 'for config:', levelConfig.nombre);
 
   // Fetch roles from Strapi
   let availableRoles: string[] = DEFAULT_CAMPUS_ROLES;

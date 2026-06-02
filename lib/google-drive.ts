@@ -1,7 +1,14 @@
 import { google, drive_v3 } from 'googleapis';
 import { cookies } from 'next/headers';
 import { fetchStrapi } from './strapi';
-import { DEFAULT_CAMPUS_ROLES, getLeccionesFolderForRole } from './roles';
+import { DEFAULT_CAMPUS_ROLES, getLeccionesFolderForRole, LevelConfig } from './roles';
+
+// ── Helpers de adaptador ──────────────────────────────────────────────────────
+// Permite que las funciones acepten tanto un string (legacy) como un LevelConfig (nuevo).
+
+function isLevelConfig(arg: string | LevelConfig | undefined): arg is LevelConfig {
+  return typeof arg === 'object' && arg !== null && 'nombre' in arg;
+}
 
 // ── Auth ──────────────────────────────────────────────────────────────────────
 
@@ -66,20 +73,31 @@ const FILE_FIELDS =
  * Find the folder for a given lesson number inside a specific level folder or the root.
  * Folder naming convention: "Leccion-01", "Leccion-02", ...
  */
-export async function getLessonFolder(leccionNum: string, levelName?: string): Promise<drive_v3.Schema$File | null> {
+/**
+ * Encuentra la carpeta de una lección específica.
+ * Acepta string (legacy) o LevelConfig (nuevo sistema).
+ */
+export async function getLessonFolder(
+  leccionNum: string,
+  level?: string | LevelConfig
+): Promise<drive_v3.Schema$File | null> {
   const drive = getDriveClient();
   const padded = leccionNum.padStart(2, '0');
   const rootId = process.env.DRIVE_ROOT_FOLDER_ID!;
 
+  // Resolver el nombre de carpeta de Drive
+  let leccionesFolderName: string;
+  if (isLevelConfig(level)) {
+    leccionesFolderName = level.folder;
+  } else {
+    leccionesFolderName = getLeccionesFolderForRole(level);
+  }
+
   console.log(`DEBUG: Searching for lesson folder for number: ${leccionNum}`);
 
-  // We'll search for both Leccion-XX and Lección-XX (and also handle non-padded versions)
   const namePatterns = [`Leccion-${leccionNum}`, `Lección-${leccionNum}`, `Leccion-${padded}`, `Lección-${padded}`];
-
-  // Construct a query that checks for any of these names
   const nameQuery = namePatterns.map(n => `name = '${n}'`).join(' or ');
 
-  const leccionesFolderName = getLeccionesFolderForRole(levelName);
   const leccionesFolderId = await getSubfolder(rootId, leccionesFolderName);
   const parentId = leccionesFolderId || rootId;
 
@@ -94,7 +112,6 @@ export async function getLessonFolder(leccionNum: string, levelName?: string): P
     return res.data.files[0];
   }
 
-  // If not found and we used the "Lecciones" folder, check the root folder just in case
   if (parentId !== rootId) {
     const resRoot = await drive.files.list({
       q: `'${rootId}' in parents and (${nameQuery}) and mimeType = 'application/vnd.google-apps.folder' and trashed = false`,
@@ -110,77 +127,82 @@ export async function getLessonFolder(leccionNum: string, levelName?: string): P
 /**
  * List all lesson folders inside a specific level folder (e.g. "Nivel I").
  */
-export async function getAvailableLessons(levelName?: string): Promise<{ label: string; href: string }[]> {
+/**
+ * Lista las lecciones disponibles para un nivel.
+ *
+ * Acepta:
+ * - `LevelConfig` (nuevo sistema): usa directamente `config.folder` y el rango del config,
+ *   sin hacer llamadas adicionales a Strapi (el rango ya fue resuelto en `buildLevelConfig`).
+ * - `string` (legacy): comportamiento anterior — consulta Strapi mapeo-lecciones por rol.
+ * - `undefined`: muestra todas las lecciones sin filtro de rango.
+ */
+export async function getAvailableLessons(
+  level?: string | LevelConfig
+): Promise<{ label: string; href: string }[]> {
+
   let inicio = 1;
   let fin = 50;
+  let leccionesFolderName = 'Lecciones';
 
-  // Default fallback ranges to make sure it is fully robust
-  const fallbackRanges: Record<string, { inicio: number; fin: number }> = {
-    'Año I Adultos': { inicio: 1, fin: 10 },
-    'Año II Adultos': { inicio: 11, fin: 20 },
-    'Año III Adultos': { inicio: 21, fin: 30 },
-    'Año IV Adultos': { inicio: 31, fin: 40 },
-    'Año V Adultos': { inicio: 41, fin: 50 },
-    'Nivel I Niños': { inicio: 1, fin: 25 },
-    'Nivel II Niños': { inicio: 26, fin: 50 },
-    'niños 1 er nivel ( junio)': { inicio: 1, fin: 25 },
-    'Curso introductorio': { inicio: 1, fin: 50 },
-    'Estudiante': { inicio: 1, fin: 50 },
-    'Alumno': { inicio: 1, fin: 50 },
-    'Profesor': { inicio: 1, fin: 50 },
-    'Directora': { inicio: 1, fin: 50 },
-  };
+  if (isLevelConfig(level)) {
+    // ── Nuevo sistema: todo viene resuelto del LevelConfig ──────────────────
+    inicio = level.leccionInicio;
+    fin    = level.leccionFin;
+    leccionesFolderName = level.folder;
+    console.log(`DEBUG [programa]: Listing lessons [${inicio}-${fin}] in folder '${leccionesFolderName}' (source=${level.source})`);
 
-  let leccionesFolderName = getLeccionesFolderForRole(levelName);
-
-  if (levelName) {
-    if (fallbackRanges[levelName]) {
-      inicio = fallbackRanges[levelName].inicio;
-      fin = fallbackRanges[levelName].fin;
-    }
+  } else if (typeof level === 'string') {
+    // ── Legacy: string de rol ───────────────────────────────────────────────
+    const levelName = level;
+    const { getDefaultRangeForRole } = await import('./roles');
+    const defaults = getDefaultRangeForRole(levelName);
+    inicio = defaults.inicio;
+    fin    = defaults.fin;
+    leccionesFolderName = getLeccionesFolderForRole(levelName);
 
     try {
       const cookieStore = await cookies();
       const jwt = cookieStore.get('jwt')?.value;
 
-      // Fetch mapping from Strapi (query mapeo-lecciones dynamically)
-      const resMapping = await fetchStrapi('mapeo-lecciones', `filters[Rol][$eq]=${encodeURIComponent(levelName)}&populate=*`, jwt);
+      const resMapping = await fetchStrapi(
+        'mapeo-lecciones',
+        `filters[Rol][$eq]=${encodeURIComponent(levelName)}&populate=*`,
+        jwt
+      );
 
-      if (resMapping && resMapping.data) {
+      if (resMapping?.data) {
         const items = Array.isArray(resMapping.data) ? resMapping.data : [resMapping.data];
         if (items.length > 0) {
-          const item = items[0];
-          const fields = item.attributes || item;
-          const leccionInicio = fields.LeccionInicio || fields.leccionInicio || fields.Inicio || fields.inicio;
-          const leccionFin = fields.LeccionFin || fields.leccionFin || fields.Fin || fields.fin;
-          const carpetaEspecifica = fields.CarpetaEspecifica || fields.carpetaEspecifica || fields.Carpeta || fields.carpeta;
+          const fields = items[0].attributes || items[0];
+          const leccionInicio = fields.LeccionInicio ?? fields.leccionInicio ?? fields.Inicio ?? fields.inicio;
+          const leccionFin    = fields.LeccionFin    ?? fields.leccionFin    ?? fields.Fin    ?? fields.fin;
+          const carpeta       = fields.CarpetaEspecifica ?? fields.carpetaEspecifica ?? fields.Carpeta ?? fields.carpeta;
 
           if (typeof leccionInicio === 'number' && typeof leccionFin === 'number') {
             inicio = leccionInicio;
-            fin = leccionFin;
-            console.log(`DEBUG: Strapi dynamic range loaded for role ${levelName}: [${inicio}, ${fin}]`);
+            fin    = leccionFin;
+            console.log(`DEBUG [rol]: Strapi range for '${levelName}': [${inicio}, ${fin}]`);
           }
-          if (carpetaEspecifica && typeof carpetaEspecifica === 'string' && carpetaEspecifica.trim().length > 0) {
-            leccionesFolderName = carpetaEspecifica.trim();
-            console.log(`DEBUG: Strapi mapping provides CarpetaEspecifica='${leccionesFolderName}' for role ${levelName}`);
+          if (typeof carpeta === 'string' && carpeta.trim()) {
+            leccionesFolderName = carpeta.trim();
+            console.log(`DEBUG [rol]: Strapi CarpetaEspecifica='${leccionesFolderName}'`);
           }
         }
       }
     } catch (err) {
-      console.error(`DEBUG: Error fetching mapeo-lecciones for role ${levelName}, using fallback range:`, err);
+      console.error(`DEBUG: Error fetching mapeo-lecciones for '${levelName}', using fallback:`, err);
     }
   }
 
-  console.log(`DEBUG: Listing lessons within range [${inicio}, ${fin}] for role: ${levelName}`);
+  console.log(`DEBUG: Listing lessons [${inicio}-${fin}] folder='${leccionesFolderName}'`);
 
   const drive = getDriveClient();
   const rootId = process.env.DRIVE_ROOT_FOLDER_ID!;
 
   try {
-    console.log(`DEBUG: Attempting to find lessons folder name='${leccionesFolderName}' for role='${levelName}'`);
     const leccionesFolderId = await getSubfolder(rootId, leccionesFolderName);
     const parentId = leccionesFolderId || rootId;
-    console.log(`DEBUG: Using parentId='${parentId}' (folder='${leccionesFolderName}')`);
+    console.log(`DEBUG: parentId='${parentId}' (folder='${leccionesFolderName}')`);
 
     const res = await drive.files.list({
       q: `'${parentId}' in parents and trashed = false`,
@@ -189,14 +211,12 @@ export async function getAvailableLessons(levelName?: string): Promise<{ label: 
     });
 
     let files = res.data.files ?? [];
-
-    // Filter folders matching "Leccion-XX" / "Lección-XX"
     let lessons = files.filter(f =>
       (f.name?.toLowerCase().includes('leccion-') || f.name?.toLowerCase().includes('lección-')) &&
       f.mimeType === 'application/vnd.google-apps.folder'
     );
 
-    // If no lessons found inside "Lecciones" folder, check the root folder as fallback
+    // Fallback al root si no se encontró nada en la carpeta específica
     if (lessons.length === 0 && parentId !== rootId) {
       const resRoot = await drive.files.list({
         q: `'${rootId}' in parents and trashed = false`,
@@ -215,11 +235,7 @@ export async function getAvailableLessons(levelName?: string): Promise<{ label: 
         const match = name.match(/Lecci[oó]n-(\d+)/i);
         const numStr = match ? match[1] : '';
         const num = parseInt(numStr, 10);
-        return {
-          label: `Lección ${num || numStr}`,
-          href: `/campus/curso/${num || numStr}`,
-          num: num || 0
-        };
+        return { label: `Lección ${num || numStr}`, href: `/campus/curso/${num || numStr}`, num: num || 0 };
       })
       .filter(item => item.num >= inicio && item.num <= fin)
       .sort((a, b) => a.num - b.num)
@@ -271,8 +287,14 @@ export async function getPortada(
 /**
  * Get all metadata for a lesson (portada, description, subfolder IDs).
  */
-export async function getLessonMeta(leccion: string, levelName?: string): Promise<LessonMeta> {
-  const folder = await getLessonFolder(leccion, levelName);
+/**
+ * Obtiene los metadatos de una lección (portada, guías, audios, tareas, grabaciones).
+ * Acepta string (legacy) o LevelConfig (nuevo sistema).
+ */
+export async function getLessonMeta(leccion: string, level?: string | LevelConfig): Promise<LessonMeta> {
+  const folder = await getLessonFolder(leccion, level);
+  // Para buscar grabaciones en la carpeta del nivel usamos el nombre del nivel
+  const levelName = isLevelConfig(level) ? level.nombre : level;
 
   if (!folder?.id) {
     return {
@@ -292,22 +314,22 @@ export async function getLessonMeta(leccion: string, levelName?: string): Promis
     getSubfolder(folder.id, 'Tareas'),
   ]);
 
-  // 2. Fetch grabaciones folder from the role folder
+  // 2. Grabaciones: buscar en la carpeta del nivel (por nombre)
   let grabacionesId: string | null = null;
   const rootId = process.env.DRIVE_ROOT_FOLDER_ID!;
   if (levelName) {
     const levelFolderId = await getSubfolder(rootId, levelName);
     if (levelFolderId) {
       grabacionesId = await getSubfolder(levelFolderId, 'Grabaciones');
-      console.log(`DEBUG: Found level-specific recordings folder for role ${levelName} -> ${grabacionesId}`);
+      console.log(`DEBUG: Grabaciones del nivel '${levelName}': ${grabacionesId}`);
     }
   }
 
-  // 3. Backward compatibility fallback: look inside the lesson folder
+  // 3. Fallback: buscar grabaciones dentro de la carpeta de la lección
   if (!grabacionesId) {
     grabacionesId = await getSubfolder(folder.id, 'Grabaciones');
     if (grabacionesId) {
-      console.log(`DEBUG: Level-specific recordings folder not found, using lesson-level recordings -> ${grabacionesId}`);
+      console.log(`DEBUG: Usando grabaciones dentro de la lección -> ${grabacionesId}`);
     }
   }
 
@@ -566,9 +588,15 @@ export async function getCampusWorkshops(): Promise<AdditionalMaterialItem[]> {
 /**
  * Material adicional por nivel (PDFs/enlaces en carpeta "Material adicional" del año).
  */
-export async function getAdditionalMaterial(levelName?: string): Promise<AdditionalMaterialItem[]> {
+/**
+ * Material adicional por nivel.
+ * Acepta string (legacy) o LevelConfig (nuevo sistema).
+ */
+export async function getAdditionalMaterial(level?: string | LevelConfig): Promise<AdditionalMaterialItem[]> {
   const drive = getDriveClient();
   const rootId = process.env.DRIVE_ROOT_FOLDER_ID;
+  // Para buscar la carpeta del nivel, usamos el nombre (nombre del programa o rol)
+  const levelName = isLevelConfig(level) ? level.nombre : level;
 
   if (!levelName || !rootId) return [];
 

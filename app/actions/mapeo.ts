@@ -156,3 +156,75 @@ export async function saveMapeoAction(data: {
     return { success: false, error: error.message || "Error interno al guardar mapeo.", isStrapiDown: true };
   }
 }
+
+/**
+ * Obtiene la lista de programas desde Strapi con su mapeo de lecciones relacionado.
+ * Solo accesible para Directora o Profesor.
+ */
+export async function getProgramasAction() {
+  try {
+    if (!(await isAuthorized())) {
+      return { success: false, error: "No autorizado." };
+    }
+
+    const cookieStore = await cookies();
+    const jwt = cookieStore.get("jwt")?.value;
+
+    if (!jwt) {
+      return { success: false, error: "Sesión no válida o expirada." };
+    }
+
+    // populate mapeo_lecciones para obtener el rango directamente
+    const res = await fetchStrapi(
+      "programas",
+      "populate[mapeo_lecciones]=true&pagination[limit]=100",
+      jwt
+    );
+
+    if (!res) {
+      return { success: false, error: "No se pudo conectar con Strapi.", isStrapiDown: true };
+    }
+    if (res.error || (res.statusCode && res.statusCode >= 400)) {
+      console.error("DEBUG getProgramasAction: Strapi error:", res);
+      return {
+        success: false,
+        error: res?.error?.message || res?.message || "Error del servidor Strapi.",
+        isStrapiDown: true,
+      };
+    }
+
+    const rawData: any[] = Array.isArray(res.data)
+      ? res.data
+      : res.data
+      ? [res.data]
+      : [];
+
+    const programas = rawData.map((item: any) => {
+      const f = item.attributes || item;
+      const mapeo = f.mapeo_lecciones?.data
+        ? (f.mapeo_lecciones.data.attributes || f.mapeo_lecciones.data)
+        : f.mapeo_lecciones; // v5 flat
+
+      return {
+        id: item.id,
+        documentId: item.documentId || String(item.id),
+        nombre: f.nombre ?? f.Nombre ?? '',
+        folder: (f.folder ?? f.Folder ?? '').trim() || 'Lecciones',
+        cursos: f.cursos ?? f.Cursos ?? null,
+        mapeoLecciones: mapeo
+          ? {
+              id: mapeo.id,
+              documentId: mapeo.documentId || String(mapeo.id),
+              LeccionInicio: Number(mapeo.LeccionInicio ?? mapeo.leccionInicio ?? 1),
+              LeccionFin:    Number(mapeo.LeccionFin    ?? mapeo.leccionFin    ?? 50),
+            }
+          : null,
+      };
+    });
+
+    return { success: true, data: programas };
+  } catch (error: any) {
+    console.error("DEBUG getProgramasAction error:", error);
+    return { success: false, error: error.message || "Error al obtener programas.", isStrapiDown: true };
+  }
+}

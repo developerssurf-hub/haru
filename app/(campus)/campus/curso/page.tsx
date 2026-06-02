@@ -1,10 +1,13 @@
-import { getEffectiveRole } from '@/lib/user';
+import { getMe, getEffectiveRole } from '@/lib/user';
 import { getAvailableLessons } from '@/lib/google-drive';
+import { buildLevelConfig } from '@/lib/roles';
 import Link from 'next/link';
 
 export default async function LessonOverview() {
+  const user = await getMe();
   const role = await getEffectiveRole();
-  const lessons = (await getAvailableLessons(role)) ?? [];
+  const levelConfig = buildLevelConfig(user, role);
+  const lessons = (await getAvailableLessons(levelConfig)) ?? [];
 
   return (
     <div className="pt-8 md:p-8 max-w-7xl mx-auto">
