@@ -39,24 +39,6 @@ export default async function CampusLayout({
 
       // Always allow the user to switch back to Directora view
       availableRoles.unshift('Directora');
-
-      // If user is Directora and is simulating a program, inject it so buildLevelConfig uses it
-      if (isDirectora && simulatedRole && simulatedRole !== 'Directora') {
-        const simulatedProgram = programsArray.find(
-          (p: any) => (p.Nombre || p.attributes?.Nombre) === simulatedRole
-        );
-        if (simulatedProgram && user) {
-          const rawMapeo = simulatedProgram.mapeo_lecciones || simulatedProgram.attributes?.mapeo_lecciones;
-          const mappedMapeo = rawMapeo?.data?.attributes || rawMapeo;
-          
-          user.programa = {
-            id: simulatedProgram.id,
-            nombre: simulatedProgram.Nombre || simulatedProgram.attributes?.Nombre,
-            folder: simulatedProgram.folder || simulatedProgram.attributes?.folder,
-            mapeo_lecciones: mappedMapeo
-          };
-        }
-      }
     }
   } catch (error) {
     availableRoles = ['Directora', ...DEFAULT_CAMPUS_ROLES];

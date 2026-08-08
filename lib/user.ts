@@ -51,6 +51,39 @@ export async function getMe() {
     // Debug: escribe el usuario a un archivo para diagnóstico
     const fs = require('fs');
     fs.writeFileSync('debug_strapi.json', JSON.stringify(data, null, 2));
+
+    // Si es Directora y está simulando, inyectamos el programa
+    const simulatedRole = cookieStore.get("simulated_role")?.value;
+    if (data?.role?.name === 'Directora' && simulatedRole && simulatedRole !== 'Directora') {
+      try {
+        const programsRes = await fetch(
+          `${STRAPI_URL}/api/programas?populate[mapeo_lecciones]=true`,
+          { headers: { Authorization: `Bearer ${jwt}` }, cache: 'no-store' }
+        );
+        if (programsRes.ok) {
+          const programsData = await programsRes.json();
+          const programsArray = programsData?.data || programsData || [];
+          const simulatedProgram = programsArray.find(
+            (p: any) => (p.Nombre || p.attributes?.Nombre) === simulatedRole
+          );
+          if (simulatedProgram) {
+            const rawMapeo = simulatedProgram.mapeo_lecciones || simulatedProgram.attributes?.mapeo_lecciones;
+            const mappedMapeo = rawMapeo?.data?.attributes || rawMapeo;
+            
+            data.programa = {
+              id: simulatedProgram.id,
+              nombre: simulatedProgram.Nombre || simulatedProgram.attributes?.Nombre,
+              folder: simulatedProgram.Folder || simulatedProgram.attributes?.Folder || simulatedProgram.folder || simulatedProgram.attributes?.folder,
+              Folder: simulatedProgram.Folder || simulatedProgram.attributes?.Folder,
+              mapeo_lecciones: mappedMapeo
+            };
+          }
+        }
+      } catch (err) {
+        console.error("DEBUG: Failed to inject simulated program", err);
+      }
+    }
+
     console.log("DEBUG: getMe SUCCESS. User id:", data.id);
     return data;
   } catch (error) {
