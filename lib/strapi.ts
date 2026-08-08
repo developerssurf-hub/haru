@@ -12,9 +12,16 @@ export async function fetchStrapi(endpoint: string, query?: string, token?: stri
       headers,
       cache: 'no-store',
     });
-    const data = await res.json();
+    const text = await res.text();
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch (e) {
+      console.error('fetchStrapi JSON parse error:', text);
+      return null;
+    }
     if (!res.ok) {
-      console.error('fetchStrapi error HTTP ' + res.status + ':', url, data);
+      console.error('fetchStrapi error HTTP ' + res.status + ':', url, text);
     }
     return data;
   } catch (error) {
@@ -42,9 +49,16 @@ export async function postStrapi(endpoint: string, data: any, token: string) {
       },
       body: JSON.stringify({ data }),
     });
-    const json = await res.json();
+    const text = await res.text();
+    let json;
+    try {
+      json = JSON.parse(text);
+    } catch (e) {
+      console.error('postStrapi JSON parse error:', text);
+      return null;
+    }
     if (!res.ok) {
-      console.error(`postStrapi ${endpoint} returned ${res.status}:`, json);
+      console.error(`postStrapi ${endpoint} returned ${res.status}:`, text);
     }
     return json;
   } catch (error) {

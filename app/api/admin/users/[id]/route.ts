@@ -43,6 +43,7 @@ export async function PUT(req: Request, { params }: RouteParams) {
 
     if (!res.ok) {
       const errorData = await res.json();
+      console.error("🔥 STRAPI USER PUT ERROR:", JSON.stringify(errorData, null, 2));
       return NextResponse.json({ error: errorData?.error?.message || 'Error al actualizar alumno' }, { status: res.status });
     }
 

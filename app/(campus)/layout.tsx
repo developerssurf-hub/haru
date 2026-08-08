@@ -21,8 +21,46 @@ export default async function CampusLayout({
   // Logic for Directora simulation UI
   const cookieStore = await cookies();
   const simulatedRole = cookieStore.get('simulated_role')?.value;
+  const jwt = cookieStore.get('jwt')?.value;
 
   const isDirectora = actualRole === 'Directora';
+
+  // Fetch programas from Strapi for simulation dropdown
+  let availableRoles: string[] = [];
+  try {
+    const programsRes = await fetchStrapi('programas?populate[mapeo_lecciones]=true', '', jwt);
+    const programsArray = programsRes?.data || programsRes || [];
+    
+    if (Array.isArray(programsArray)) {
+      availableRoles = programsArray
+        .map((p: any) => p.Nombre || p.attributes?.Nombre)
+        .filter(Boolean)
+        .sort();
+
+      // Always allow the user to switch back to Directora view
+      availableRoles.unshift('Directora');
+
+      // If user is Directora and is simulating a program, inject it so buildLevelConfig uses it
+      if (isDirectora && simulatedRole && simulatedRole !== 'Directora') {
+        const simulatedProgram = programsArray.find(
+          (p: any) => (p.Nombre || p.attributes?.Nombre) === simulatedRole
+        );
+        if (simulatedProgram && user) {
+          const rawMapeo = simulatedProgram.mapeo_lecciones || simulatedProgram.attributes?.mapeo_lecciones;
+          const mappedMapeo = rawMapeo?.data?.attributes || rawMapeo;
+          
+          user.programa = {
+            id: simulatedProgram.id,
+            nombre: simulatedProgram.Nombre || simulatedProgram.attributes?.Nombre,
+            folder: simulatedProgram.folder || simulatedProgram.attributes?.folder,
+            mapeo_lecciones: mappedMapeo
+          };
+        }
+      }
+    }
+  } catch (error) {
+    availableRoles = ['Directora', ...DEFAULT_CAMPUS_ROLES];
+  }
 
   console.log('DEBUG: User detected:', user?.username, 'Actual Role:', actualRole, 'Effective Role:', effectiveRole);
   console.log('DEBUG: User programa:', user?.programa ? user.programa.nombre : 'ninguno (legacy)');
@@ -35,33 +73,6 @@ export default async function CampusLayout({
   const workshopLinks = await getCampusWorkshops();
   const materialLinks = await getAdditionalMaterial(levelConfig);
   console.log('DEBUG: Lessons fetched:', lecciones.length, 'for config:', levelConfig.nombre);
-
-  // Fetch roles from Strapi
-  let availableRoles: string[] = DEFAULT_CAMPUS_ROLES;
-  
-  try {
-    const cookieStore = await cookies();
-    const jwt = cookieStore.get('jwt')?.value;
-    
-    const usersRes = await fetchStrapi('users?pagination[pageSize]=1000&populate=role', '', jwt);
-    const usersArray = usersRes?.data || usersRes;
-    
-    if (Array.isArray(usersArray)) {
-      const rolesSet = new Set<string>();
-      usersArray.forEach((user: any) => {
-        const roleName = user?.role?.name || user?.attributes?.role?.data?.attributes?.name;
-        if (roleName) {
-          rolesSet.add(roleName);
-        }
-      });
-      const uniqueRoles = Array.from(rolesSet).filter((name: string) => name && !['Public', 'Authenticated'].includes(name));
-      if (uniqueRoles.length > 0) {
-        availableRoles = uniqueRoles.sort();
-      }
-    }
-  } catch (error) {
-    // Fallback silencioso a los roles por defecto
-  }
 
   return (
     <div className="min-h-screen bg-[var(--neutral-main)] flex">

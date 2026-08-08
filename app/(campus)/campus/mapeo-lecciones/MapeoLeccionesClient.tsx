@@ -9,71 +9,69 @@ import {
   Sliders,
   GraduationCap,
   Info,
-  RefreshCw
+  RefreshCw,
+  Plus,
+  FolderOpen,
+  X
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { saveMapeoAction } from '@/app/actions/mapeo';
+import { updateProgramaAction, createProgramaAction } from '@/app/actions/mapeo';
 
-interface StrapiMapping {
+interface Programa {
   id?: number | string;
-  Rol: string;
-  LeccionInicio: number;
-  LeccionFin: number;
+  documentId?: string;
+  nombre: string;
+  folder: string;
+  mapeoLecciones?: {
+    id?: number | string;
+    documentId?: string;
+    LeccionInicio: number;
+    LeccionFin: number;
+  } | null;
   isLocalOnly?: boolean;
 }
 
 interface MapeoLeccionesClientProps {
-  initialMappings: StrapiMapping[];
+  initialMappings?: any[];
+  programas?: Programa[];
   initialIsStrapiDown: boolean;
 }
 
-const ACADEMIC_ROLES = [
-  { name: 'Año I Adultos', label: 'Año I Adultos', category: 'Adultos', defaultInicio: 1, defaultFin: 10 },
-  { name: 'Año II Adultos', label: 'Año II Adultos', category: 'Adultos', defaultInicio: 11, defaultFin: 20 },
-  { name: 'Año III Adultos', label: 'Año III Adultos', category: 'Adultos', defaultInicio: 21, defaultFin: 30 },
-  { name: 'Año IV Adultos', label: 'Año IV Adultos', category: 'Adultos', defaultInicio: 31, defaultFin: 40 },
-  { name: 'Año V Adultos', label: 'Año V Adultos', category: 'Adultos', defaultInicio: 41, defaultFin: 50 },
-  { name: 'Nivel I Niños', label: 'Nivel I Niños', category: 'Niños', defaultInicio: 1, defaultFin: 25 },
-  { name: 'niños 1 er nivel ( junio)', label: 'Nivel I Niños (Junio)', category: 'Niños', defaultInicio: 1, defaultFin: 25 },
-  { name: 'Nivel II Niños', label: 'Nivel II Niños', category: 'Niños', defaultInicio: 26, defaultFin: 50 },
-  { name: 'Particulares', label: 'Particulares (Individual)', category: 'Particulares', defaultInicio: 1, defaultFin: 50 },
-  { name: 'Curso introductorio', label: 'Curso introductorio', category: 'Introductorio', defaultInicio: 1, defaultFin: 50 },
-  { name: 'Alumno', label: 'Alumno (General)', category: 'General', defaultInicio: 1, defaultFin: 50 },
-];
-
-const LOCAL_STORAGE_KEY = 'haru-mapeo-lecciones-local';
+const LOCAL_STORAGE_KEY = 'haru-programas-local';
 
 export default function MapeoLeccionesClient({
-  initialMappings,
+  programas: initialProgramas = [],
   initialIsStrapiDown,
 }: MapeoLeccionesClientProps) {
   const [isStrapiDown, setIsStrapiDown] = useState(initialIsStrapiDown);
-  const [mappings, setMappings] = useState<StrapiMapping[]>([]);
+  const [programas, setProgramas] = useState<Programa[]>([]);
   const [loadingStates, setLoadingStates] = useState<Record<string, 'idle' | 'loading' | 'success' | 'error'>>({});
   const [errorMessages, setErrorMessages] = useState<Record<string, string>>({});
 
-  // Compile active mappings, prioritizing: Local Storage (if Strapi is down) > Server Mappings > Standard Fallbacks
-  useEffect(() => {
-    let activeMappings = [...initialMappings];
+  // Form para nuevo programa
+  const [showNewForm, setShowNewForm] = useState(false);
+  const [newProg, setNewProg] = useState({ nombre: '', folder: '', LeccionInicio: 1, LeccionFin: 50 });
+  const [newProgState, setNewProgState] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+  const [newProgError, setNewProgError] = useState('');
 
-    // Attempt to load from Local Storage if Strapi is down or for robust local override testing
+  useEffect(() => {
+    let activeList = [...initialProgramas];
+
     try {
       const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
       if (stored) {
-        const parsed = JSON.parse(stored) as StrapiMapping[];
+        const parsed = JSON.parse(stored) as Programa[];
         if (parsed && Array.isArray(parsed)) {
           if (isStrapiDown) {
-            // If Strapi is down, use all local storage configs
-            activeMappings = parsed;
+            activeList = parsed;
           } else {
-            // If Strapi is active, merge in local overrides only if they have isLocalOnly flag
             const localOnly = parsed.filter(m => m.isLocalOnly);
             localOnly.forEach(localM => {
-              const idx = activeMappings.findIndex(m => m.Rol === localM.Rol);
+              const idx = activeList.findIndex(m => m.documentId === localM.documentId || m.nombre === localM.nombre);
               if (idx !== -1) {
-                activeMappings[idx] = { ...activeMappings[idx], ...localM };
+                activeList[idx] = { ...activeList[idx], ...localM };
               } else {
-                activeMappings.push(localM);
+                activeList.push(localM);
               }
             });
           }
@@ -83,164 +81,168 @@ export default function MapeoLeccionesClient({
       console.error('Failed to read from localStorage:', e);
     }
 
-    // Ensure EVERY academic role from ACADEMIC_ROLES is mapped
-    const finalMappings = ACADEMIC_ROLES.map(role => {
-      const existing = activeMappings.find(m => m.Rol === role.name);
-      return {
-        id: existing?.id,
-        Rol: role.name,
-        LeccionInicio: existing?.LeccionInicio ?? role.defaultInicio,
-        LeccionFin: existing?.LeccionFin ?? role.defaultFin,
-        isLocalOnly: existing?.isLocalOnly ?? isStrapiDown,
-      };
-    });
+    setProgramas(activeList);
+  }, [initialProgramas, isStrapiDown]);
 
-    setMappings(finalMappings);
-  }, [initialMappings, isStrapiDown]);
-
-  // Handle select range change
-  const handleRangeChange = (roleName: string, field: 'LeccionInicio' | 'LeccionFin', value: number) => {
-    setMappings(prev => prev.map(m => {
-      if (m.Rol === roleName) {
-        const updated = { ...m, [field]: value };
-        // Reset error message for this card if it becomes valid
-        if (field === 'LeccionInicio' && value <= m.LeccionFin) {
-          setErrorMessages(errs => ({ ...errs, [roleName]: '' }));
-        } else if (field === 'LeccionFin' && m.LeccionInicio <= value) {
-          setErrorMessages(errs => ({ ...errs, [roleName]: '' }));
+  const handleRangeChange = (progId: string | number, field: 'LeccionInicio' | 'LeccionFin' | 'folder', value: any) => {
+    setProgramas(prev => prev.map(p => {
+      const identifier = p.documentId || p.id || p.nombre;
+      if (identifier === progId) {
+        let updated = { ...p };
+        if (field === 'folder') {
+          updated.folder = value;
+        } else {
+          updated.mapeoLecciones = {
+            ...(updated.mapeoLecciones || { LeccionInicio: 1, LeccionFin: 50 }),
+            [field]: value
+          };
+        }
+        
+        const inicio = updated.mapeoLecciones?.LeccionInicio || 1;
+        const fin = updated.mapeoLecciones?.LeccionFin || 50;
+        
+        if (inicio <= fin) {
+          setErrorMessages(errs => ({ ...errs, [String(progId)]: '' }));
         }
         return updated;
       }
-      return m;
+      return p;
     }));
-
-    // Reset status on change
-    setLoadingStates(prev => ({ ...prev, [roleName]: 'idle' }));
+    setLoadingStates(prev => ({ ...prev, [String(progId)]: 'idle' }));
   };
 
-  // Save specific role configuration
-  const handleSave = async (roleName: string) => {
-    const mapping = mappings.find(m => m.Rol === roleName);
-    if (!mapping) return;
+  const handleSave = async (prog: Programa) => {
+    const identifier = String(prog.documentId || prog.id || prog.nombre);
+    const inicio = prog.mapeoLecciones?.LeccionInicio || 1;
+    const fin = prog.mapeoLecciones?.LeccionFin || 50;
 
-    // Client-side validations
-    if (mapping.LeccionInicio > mapping.LeccionFin) {
-      setErrorMessages(prev => ({
-        ...prev,
-        [roleName]: 'La lección de inicio no puede ser mayor que la lección de fin.'
-      }));
-      setLoadingStates(prev => ({ ...prev, [roleName]: 'error' }));
+    if (inicio > fin) {
+      setErrorMessages(prev => ({ ...prev, [identifier]: 'La lección de inicio no puede ser mayor que la lección de fin.' }));
+      setLoadingStates(prev => ({ ...prev, [identifier]: 'error' }));
       return;
     }
 
-    setLoadingStates(prev => ({ ...prev, [roleName]: 'loading' }));
-    setErrorMessages(prev => ({ ...prev, [roleName]: '' }));
+    setLoadingStates(prev => ({ ...prev, [identifier]: 'loading' }));
+    setErrorMessages(prev => ({ ...prev, [identifier]: '' }));
 
-    // Simulation Flow
     if (isStrapiDown) {
-      // Artificially wait to simulate premium server actions
       await new Promise(resolve => setTimeout(resolve, 600));
-      saveToLocalStorage(mapping);
-      setLoadingStates(prev => ({ ...prev, [roleName]: 'success' }));
-      setTimeout(() => {
-        setLoadingStates(prev => ({ ...prev, [roleName]: 'idle' }));
-      }, 3000);
+      saveToLocalStorage(prog);
+      setLoadingStates(prev => ({ ...prev, [identifier]: 'success' }));
+      setTimeout(() => setLoadingStates(prev => ({ ...prev, [identifier]: 'idle' })), 3000);
       return;
     }
 
-    // Real Server Action Flow
     try {
-      const res = await saveMapeoAction({
-        id: mapping.id,
-        Rol: mapping.Rol,
-        LeccionInicio: mapping.LeccionInicio,
-        LeccionFin: mapping.LeccionFin
+      const res = await updateProgramaAction({
+        documentId: prog.documentId,
+        id: prog.id,
+        nombre: prog.nombre,
+        folder: prog.folder,
+        mapeoDocumentId: prog.mapeoLecciones?.documentId,
+        LeccionInicio: inicio,
+        LeccionFin: fin,
       });
 
       if (res.success && res.data) {
-        // Update local state ID in case it was newly created
-        setMappings(prev => prev.map(m => {
-          if (m.Rol === roleName) {
-            return {
-              ...m,
-              id: res.data?.id,
-              isLocalOnly: false
-            };
-          }
-          return m;
-        }));
-        setLoadingStates(prev => ({ ...prev, [roleName]: 'success' }));
-        setTimeout(() => {
-          setLoadingStates(prev => ({ ...prev, [roleName]: 'idle' }));
-        }, 3000);
+        setProgramas(prev => prev.map(p => (p.documentId === prog.documentId || p.id === prog.id) ? { ...p, ...res.data, isLocalOnly: false } : p));
+        setLoadingStates(prev => ({ ...prev, [identifier]: 'success' }));
+        setTimeout(() => setLoadingStates(prev => ({ ...prev, [identifier]: 'idle' })), 3000);
       } else {
-        // Check if database was offline
         if (res.isStrapiDown) {
           setIsStrapiDown(true);
-          saveToLocalStorage(mapping);
-          setLoadingStates(prev => ({ ...prev, [roleName]: 'success' }));
-          setTimeout(() => {
-            setLoadingStates(prev => ({ ...prev, [roleName]: 'idle' }));
-          }, 3000);
+          saveToLocalStorage(prog);
+          setLoadingStates(prev => ({ ...prev, [identifier]: 'success' }));
+          setTimeout(() => setLoadingStates(prev => ({ ...prev, [identifier]: 'idle' })), 3000);
         } else {
-          setErrorMessages(prev => ({
-            ...prev,
-            [roleName]: res.error || 'Ocurrió un error al guardar.'
-          }));
-          setLoadingStates(prev => ({ ...prev, [roleName]: 'error' }));
+          setErrorMessages(prev => ({ ...prev, [identifier]: res.error || 'Ocurrió un error al guardar.' }));
+          setLoadingStates(prev => ({ ...prev, [identifier]: 'error' }));
         }
       }
     } catch (err: any) {
-      console.error('Save action error:', err);
-      setErrorMessages(prev => ({
-        ...prev,
-        [roleName]: err.message || 'Error de conexión.'
-      }));
-      setLoadingStates(prev => ({ ...prev, [roleName]: 'error' }));
+      setErrorMessages(prev => ({ ...prev, [identifier]: err.message || 'Error de conexión.' }));
+      setLoadingStates(prev => ({ ...prev, [identifier]: 'error' }));
     }
   };
 
-  // Helper to persist to Local Storage during Strapi downtime
-  const saveToLocalStorage = (updatedMapping: StrapiMapping) => {
+  const handleCreatePrograma = async () => {
+    if (!newProg.nombre) {
+      setNewProgError('El nombre del programa es obligatorio.');
+      return;
+    }
+    if (newProg.LeccionInicio > newProg.LeccionFin) {
+      setNewProgError('La lección de inicio no puede ser mayor que la de fin.');
+      return;
+    }
+
+    setNewProgState('loading');
+    setNewProgError('');
+
+    if (isStrapiDown) {
+      await new Promise(resolve => setTimeout(resolve, 600));
+      const newP: Programa = {
+        documentId: `local-${Date.now()}`,
+        nombre: newProg.nombre,
+        folder: newProg.folder,
+        mapeoLecciones: { LeccionInicio: newProg.LeccionInicio, LeccionFin: newProg.LeccionFin },
+        isLocalOnly: true,
+      };
+      setProgramas(prev => [...prev, newP]);
+      saveToLocalStorage(newP);
+      setNewProgState('success');
+      setTimeout(() => {
+        setNewProgState('idle');
+        setShowNewForm(false);
+        setNewProg({ nombre: '', folder: '', LeccionInicio: 1, LeccionFin: 50 });
+      }, 1500);
+      return;
+    }
+
+    try {
+      const res = await createProgramaAction(newProg);
+      if (res.success && res.data) {
+        setProgramas(prev => [...prev, res.data]);
+        setNewProgState('success');
+        setTimeout(() => {
+          setNewProgState('idle');
+          setShowNewForm(false);
+          setNewProg({ nombre: '', folder: '', LeccionInicio: 1, LeccionFin: 50 });
+        }, 1500);
+      } else {
+        if (res.isStrapiDown) {
+          setIsStrapiDown(true);
+        }
+        setNewProgError(res.error || 'Ocurrió un error al crear.');
+        setNewProgState('error');
+      }
+    } catch (err: any) {
+      setNewProgError(err.message || 'Error de conexión.');
+      setNewProgState('error');
+    }
+  };
+
+  const saveToLocalStorage = (prog: Programa) => {
     try {
       const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
-      let list: StrapiMapping[] = [];
-      if (stored) {
-        list = JSON.parse(stored) as StrapiMapping[];
-      }
-
-      const idx = list.findIndex(m => m.Rol === updatedMapping.Rol);
-      const payload = { ...updatedMapping, isLocalOnly: true };
+      let list: Programa[] = stored ? JSON.parse(stored) : [];
+      const idx = list.findIndex(m => m.documentId === prog.documentId || m.nombre === prog.nombre);
+      const payload = { ...prog, isLocalOnly: true };
 
       if (idx !== -1) {
         list[idx] = payload;
       } else {
         list.push(payload);
       }
-
       localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(list));
     } catch (e) {
       console.error('LocalStorage save failed:', e);
     }
   };
 
-  // Force local storage clear to reset to defaults
   const handleResetDefaults = () => {
-    if (confirm('¿Estás seguro de que quieres restablecer todos los mapeos locales a los valores estándar de Haru?')) {
+    if (confirm('¿Estás seguro de que quieres restablecer los datos locales? Esto puede borrar programas simulados.')) {
       localStorage.removeItem(LOCAL_STORAGE_KEY);
-      if (isStrapiDown) {
-        // If strapi is down, just rebuild the state
-        const resetMappings = ACADEMIC_ROLES.map(role => ({
-          Rol: role.name,
-          LeccionInicio: role.defaultInicio,
-          LeccionFin: role.defaultFin,
-          isLocalOnly: true,
-        }));
-        setMappings(resetMappings);
-      } else {
-        // If strapi is active, reload page to fetch fresh server maps
-        window.location.reload();
-      }
+      window.location.reload();
     }
   };
 
@@ -248,7 +250,6 @@ export default function MapeoLeccionesClient({
     <div className="max-w-7xl mx-auto space-y-8">
       {/* ── Header ─────────────────────────────────────────── */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-white/70 backdrop-blur-md p-8 border border-zinc-200/60 rounded-3xl shadow-sm relative overflow-hidden">
-        {/* Glow decoration */}
         <div className="absolute top-0 right-0 w-64 h-64 bg-pink-300/10 rounded-full blur-3xl pointer-events-none -mr-20 -mt-20"></div>
         <div className="absolute bottom-0 left-0 w-48 h-48 bg-purple-300/10 rounded-full blur-2xl pointer-events-none -ml-16 -mb-16"></div>
 
@@ -258,22 +259,32 @@ export default function MapeoLeccionesClient({
               <Sliders className="w-6 h-6" />
             </div>
             <h1 className="text-2xl md:text-3xl font-serif font-semibold text-[var(--neutral-900)]">
-              Mapeo de Lecciones por Rol
+              Mapeo de Programas
             </h1>
           </div>
           <p className="text-sm text-zinc-500 max-w-2xl leading-relaxed">
-            Relaciona cada uno de los roles académicos con el rango correspondiente de lecciones (de la 1 a la 50) para modularizar el contenido en el panel de lecciones del alumno.
+            Crea y gestiona programas académicos. Asigna el rango de lecciones visibles y vincula la carpeta de Google Drive correspondiente a cada programa.
           </p>
         </div>
 
-        <button
-          onClick={handleResetDefaults}
-          className="relative z-10 flex items-center justify-center gap-2 px-4 py-2.5 text-xs font-semibold text-zinc-600 hover:text-zinc-950 bg-zinc-50 hover:bg-zinc-100 border border-zinc-200/80 rounded-xl transition-all duration-200"
-          title="Restaurar a los rangos por defecto"
-        >
-          <RefreshCw className="w-3.5 h-3.5" />
-          Restablecer Valores
-        </button>
+        <div className="relative z-10 flex flex-col gap-3">
+          <button
+            onClick={() => setShowNewForm(!showNewForm)}
+            className="flex items-center justify-center gap-2 px-5 py-2.5 text-sm font-semibold text-white premium-gradient shadow-sm hover:shadow-md hover:scale-[1.02] active:scale-[0.98] rounded-xl transition-all duration-200"
+          >
+            {showNewForm ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+            {showNewForm ? 'Cancelar' : 'Nuevo Programa'}
+          </button>
+          
+          <button
+            onClick={handleResetDefaults}
+            className="flex items-center justify-center gap-2 px-4 py-2 text-xs font-semibold text-zinc-600 hover:text-zinc-950 bg-zinc-50 hover:bg-zinc-100 border border-zinc-200/80 rounded-xl transition-all duration-200"
+            title="Recargar datos del servidor"
+          >
+            <RefreshCw className="w-3.5 h-3.5" />
+            Recargar
+          </button>
+        </div>
       </div>
 
       {/* ── Strapi Offline Alert ────────────────────────────── */}
@@ -293,10 +304,101 @@ export default function MapeoLeccionesClient({
                 Modo de Simulación Activo
               </h4>
               <p className="text-xs text-amber-700 leading-relaxed">
-                No logramos comunicarnos con la base de datos de Strapi (el servidor devolvió un error).
-                Para que puedas seguir probando los cambios sin interrupciones, <strong>se ha habilitado el almacenamiento simulado en tu navegador</strong>.
-                Las modificaciones que guardes se aplicarán de inmediato y persistirán en esta sesión.
+                No logramos comunicarnos con la base de datos. Se ha habilitado el almacenamiento simulado.
               </p>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Create New Form ────────────────────────────── */}
+      <AnimatePresence>
+        {showNewForm && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="overflow-hidden"
+          >
+            <div className="bg-white border border-pink-100 rounded-2xl p-6 shadow-md relative overflow-hidden mb-8">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-pink-100/50 rounded-full blur-2xl -mr-10 -mt-10 pointer-events-none"></div>
+              
+              <h3 className="text-lg font-bold text-[var(--neutral-900)] mb-4 flex items-center gap-2">
+                <Plus className="w-5 h-5 text-[var(--primary-700)]" />
+                Crear Nuevo Programa
+              </h3>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 relative z-10">
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-zinc-600 uppercase tracking-wide">Nombre del Programa</label>
+                  <input
+                    type="text"
+                    value={newProg.nombre}
+                    onChange={e => setNewProg({ ...newProg, nombre: e.target.value })}
+                    className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-pink-100 focus:border-pink-500 transition-colors"
+                    placeholder="Ej. Curso Intensivo 2026"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-zinc-600 uppercase tracking-wide">Nombre de la Carpeta Drive</label>
+                  <input
+                    type="text"
+                    value={newProg.folder}
+                    onChange={e => setNewProg({ ...newProg, folder: e.target.value })}
+                    className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-pink-100 focus:border-pink-500 transition-colors"
+                    placeholder="Ej. Lecciones avanzado"
+                  />
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-zinc-600 uppercase tracking-wide">Inicio</label>
+                    <input
+                      type="number"
+                      min="1"
+                      value={newProg.LeccionInicio}
+                      onChange={e => setNewProg({ ...newProg, LeccionInicio: parseInt(e.target.value, 10) || 1 })}
+                      className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-pink-100 focus:border-[var(--primary-700)]"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-zinc-600 uppercase tracking-wide">Fin</label>
+                    <input
+                      type="number"
+                      min="1"
+                      value={newProg.LeccionFin}
+                      onChange={e => setNewProg({ ...newProg, LeccionFin: parseInt(e.target.value, 10) || 1 })}
+                      className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-pink-100 focus:border-[var(--primary-700)]"
+                    />
+                  </div>
+                </div>
+              </div>
+              
+              {newProgError && (
+                <div className="mt-4 flex items-center gap-1.5 text-xs text-red-600 bg-red-50 border border-red-100 p-3 rounded-xl">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  <span>{newProgError}</span>
+                </div>
+              )}
+              
+              <div className="mt-6 flex justify-end">
+                <button
+                  onClick={handleCreatePrograma}
+                  disabled={newProgState === 'loading'}
+                  className={`px-6 py-2.5 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 transition-all duration-200 ${
+                    newProgState === 'loading'
+                      ? 'bg-zinc-100 text-zinc-500 cursor-wait'
+                      : newProgState === 'success'
+                        ? 'bg-emerald-500 text-white'
+                        : 'premium-gradient text-white hover:shadow-md hover:scale-[1.02]'
+                  }`}
+                >
+                  {newProgState === 'loading' && <Loader2 className="w-4 h-4 animate-spin" />}
+                  {newProgState === 'success' && <CheckCircle2 className="w-4 h-4 animate-bounce" />}
+                  {newProgState === 'idle' && <Save className="w-4 h-4" />}
+                  {newProgState === 'loading' ? 'Creando...' : newProgState === 'success' ? '¡Creado!' : 'Guardar Programa'}
+                </button>
+              </div>
             </div>
           </motion.div>
         )}
@@ -304,34 +406,24 @@ export default function MapeoLeccionesClient({
 
       {/* ── Mappings Cards Grid ─────────────────────────────── */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {mappings.map((mapping) => {
-          const roleMeta = ACADEMIC_ROLES.find(r => r.name === mapping.Rol);
-          const category = roleMeta?.category || 'General';
-          const errorMsg = errorMessages[mapping.Rol];
-          const loadState = loadingStates[mapping.Rol] || 'idle';
+        {programas.map((prog) => {
+          const identifier = String(prog.documentId || prog.id || prog.nombre);
+          const errorMsg = errorMessages[identifier];
+          const loadState = loadingStates[identifier] || 'idle';
 
-          const inicio = mapping.LeccionInicio;
-          const fin = mapping.LeccionFin;
+          const inicio = prog.mapeoLecciones?.LeccionInicio || 1;
+          const fin = prog.mapeoLecciones?.LeccionFin || 50;
           const isValid = inicio <= fin;
 
-          // Track calculation percentages (1 to 50 maps to 0% to 100%)
           const trackLeft = ((inicio - 1) / 49) * 100;
           const trackWidth = ((fin - inicio) / 49) * 100;
 
-          // Category Badge Colors
-          const badgeStyles: Record<string, string> = {
-            Adultos: 'bg-indigo-50 text-indigo-700 border-indigo-100',
-            Niños: 'bg-emerald-50 text-emerald-700 border-emerald-100',
-            General: 'bg-zinc-50 text-zinc-700 border-zinc-100',
-          };
-
           return (
             <motion.div
-              key={mapping.Rol}
+              key={identifier}
               layout
               className="bg-white/80 backdrop-blur-md border border-zinc-200/60 rounded-2xl p-6 shadow-sm hover:shadow-md transition-all duration-300 flex flex-col justify-between relative overflow-hidden"
             >
-              {/* Decorative Glow inside cards */}
               <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-pink-500/5 to-purple-500/0 rounded-full blur-xl pointer-events-none"></div>
 
               <div className="space-y-5">
@@ -343,42 +435,46 @@ export default function MapeoLeccionesClient({
                         <GraduationCap className="w-4 h-4" />
                       </div>
                       <h3 className="text-base font-bold text-[var(--neutral-900)] tracking-tight">
-                        {roleMeta?.label || mapping.Rol}
+                        {prog.nombre}
                       </h3>
                     </div>
-                    {mapping.isLocalOnly && (
+                    {prog.isLocalOnly && (
                       <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-amber-600 bg-amber-50 border border-amber-100 px-1.5 py-0.5 rounded-md">
                         <Info className="w-2.5 h-2.5" />
                         Simulado
                       </span>
                     )}
                   </div>
-                  <span className={`text-[10px] font-bold tracking-wider uppercase px-2.5 py-1 rounded-full border ${badgeStyles[category] || badgeStyles.General}`}>
-                    {category}
-                  </span>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wide flex items-center gap-1">
+                    <FolderOpen className="w-3 h-3" /> Nombre de la Carpeta Drive
+                  </label>
+                  <input
+                    type="text"
+                    value={prog.folder || ''}
+                    onChange={(e) => handleRangeChange(identifier, 'folder', e.target.value)}
+                    className="w-full bg-white border border-zinc-200 rounded-xl px-3 py-2 text-xs text-zinc-700 focus:ring-2 focus:ring-pink-100"
+                    placeholder="Ej. Lecciones avanzado"
+                  />
                 </div>
 
                 {/* Range Visualizer Track */}
                 <div className="space-y-2 pt-2">
                   <div className="flex justify-between items-center text-[10px] font-semibold text-zinc-400">
-                    <span>Lección {inicio}</span>
-                    <span className="text-zinc-500">Mapeadas: {fin - inicio + 1}</span>
-                    <span>Lección {fin}</span>
+                    <span>L-{inicio}</span>
+                    <span className="text-zinc-500">Total: {fin - inicio + 1}</span>
+                    <span>L-{fin}</span>
                   </div>
 
                   <div className="relative h-2.5 bg-zinc-100 border border-zinc-200/50 rounded-full overflow-visible">
-                    {/* Active Track Highlight */}
                     {isValid && (
                       <div
                         className="absolute h-full bg-gradient-to-r from-pink-500 to-[var(--primary-700)] rounded-full transition-all duration-300 shadow-sm"
-                        style={{
-                          left: `${trackLeft}%`,
-                          width: `${trackWidth}%`,
-                        }}
+                        style={{ left: `${trackLeft}%`, width: `${trackWidth}%` }}
                       />
                     )}
-
-                    {/* Visual Segment Markers */}
                     <div
                       className="absolute w-2.5 h-2.5 bg-white border border-pink-500 rounded-full top-1/2 -translate-y-1/2 -translate-x-1/2 transition-all duration-300 shadow-sm z-10"
                       style={{ left: `${trackLeft}%` }}
@@ -388,51 +484,35 @@ export default function MapeoLeccionesClient({
                       style={{ left: `${trackLeft + trackWidth}%` }}
                     />
                   </div>
-
-                  <div className="flex justify-between items-center text-[9px] font-bold text-zinc-400/80 px-0.5">
-                    <span>L-01</span>
-                    <span>L-25</span>
-                    <span>L-50</span>
-                  </div>
                 </div>
 
                 {/* Dropdowns Selector Grid */}
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wide">
-                      Inicio
-                    </label>
-                    <select
+                    <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wide">Inicio</label>
+                    <input
+                      type="number"
+                      min="1"
                       value={inicio}
-                      onChange={(e) => handleRangeChange(mapping.Rol, 'LeccionInicio', parseInt(e.target.value, 10))}
-                      className="w-full bg-white border border-zinc-200 rounded-xl px-3 py-2 text-sm text-zinc-700 hover:border-zinc-300 focus:outline-none focus:ring-2 focus:ring-pink-100 focus:border-pink-500 transition-colors"
-                    >
-                      {Array.from({ length: 50 }, (_, i) => i + 1).map(num => (
-                        <option key={num} value={num}>Lección {num}</option>
-                      ))}
-                    </select>
+                      onChange={(e) => handleRangeChange(identifier, 'LeccionInicio', parseInt(e.target.value, 10) || 1)}
+                      className="w-full bg-white border border-zinc-200 rounded-xl px-3 py-2 text-sm text-zinc-700 focus:ring-2 focus:ring-pink-100"
+                    />
                   </div>
-
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wide">
-                      Fin
-                    </label>
-                    <select
+                    <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wide">Fin</label>
+                    <input
+                      type="number"
+                      min="1"
                       value={fin}
-                      onChange={(e) => handleRangeChange(mapping.Rol, 'LeccionFin', parseInt(e.target.value, 10))}
-                      className="w-full bg-white border border-zinc-200 rounded-xl px-3 py-2 text-sm text-zinc-700 hover:border-zinc-300 focus:outline-none focus:ring-2 focus:ring-pink-100 focus:border-[var(--primary-700)] transition-colors"
-                    >
-                      {Array.from({ length: 50 }, (_, i) => i + 1).map(num => (
-                        <option key={num} value={num}>Lección {num}</option>
-                      ))}
-                    </select>
+                      onChange={(e) => handleRangeChange(identifier, 'LeccionFin', parseInt(e.target.value, 10) || 1)}
+                      className="w-full bg-white border border-zinc-200 rounded-xl px-3 py-2 text-sm text-zinc-700 focus:ring-2 focus:ring-pink-100"
+                    />
                   </div>
                 </div>
               </div>
 
               {/* Card Footer Actions */}
               <div className="mt-6 pt-4 border-t border-zinc-100 flex flex-col gap-2">
-                {/* Real-time Inline Error Alert */}
                 {errorMsg && (
                   <div className="flex items-center gap-1.5 text-xs text-red-600 bg-red-50 border border-red-100 p-2 rounded-xl">
                     <AlertCircle className="w-3.5 h-3.5 shrink-0" />
@@ -448,8 +528,9 @@ export default function MapeoLeccionesClient({
 
                 <button
                   disabled={!isValid || loadState === 'loading'}
-                  onClick={() => handleSave(mapping.Rol)}
-                  className={`w-full py-2.5 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 transition-all duration-200 ${!isValid
+                  onClick={() => handleSave(prog)}
+                  className={`w-full py-2.5 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 transition-all duration-200 ${
+                    !isValid
                     ? 'bg-zinc-100 text-zinc-400 cursor-not-allowed border border-zinc-200/50'
                     : loadState === 'loading'
                       ? 'bg-zinc-100 text-zinc-500 cursor-wait border border-zinc-200/50'
@@ -458,7 +539,7 @@ export default function MapeoLeccionesClient({
                         : loadState === 'error'
                           ? 'bg-red-500 text-white shadow-sm border border-red-500'
                           : 'premium-gradient text-white shadow-sm hover:shadow-md hover:scale-[1.01] active:scale-[0.99] border border-transparent'
-                    }`}
+                  }`}
                 >
                   {loadState === 'loading' && <Loader2 className="w-4 h-4 animate-spin" />}
                   {loadState === 'success' && <CheckCircle2 className="w-4 h-4 animate-bounce" />}
@@ -466,9 +547,9 @@ export default function MapeoLeccionesClient({
                   {loadState === 'idle' && <Save className="w-4 h-4" />}
 
                   {loadState === 'loading' && 'Guardando...'}
-                  {loadState === 'success' && '¡Mapeo Guardado!'}
+                  {loadState === 'success' && '¡Programa Guardado!'}
                   {loadState === 'error' && 'Error al Guardar'}
-                  {loadState === 'idle' && 'Guardar Mapeo'}
+                  {loadState === 'idle' && 'Guardar Cambios'}
                 </button>
               </div>
             </motion.div>

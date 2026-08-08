@@ -22,7 +22,7 @@ export default async function GestionAlumnosPage() {
   // Fetch users with role populated
   let users = [];
   try {
-    const res = await fetch(`${STRAPI_URL}/api/users?populate=role`, {
+    const res = await fetch(`${STRAPI_URL}/api/users?populate=role&populate=programa`, {
       headers: {
         Authorization: `Bearer ${jwt}`,
       },
@@ -56,7 +56,26 @@ export default async function GestionAlumnosPage() {
     console.error('Error fetching roles on server:', error);
   }
 
+  // Fetch programas list
+  let programas = [];
+  try {
+    const res = await fetch(`${STRAPI_URL}/api/programas?pagination[limit]=100`, {
+      headers: {
+        Authorization: `Bearer ${jwt}`,
+      },
+      cache: 'no-store',
+    });
+    if (res.ok) {
+      const data = await res.json();
+      programas = data?.data || [];
+    } else {
+      console.error('Failed to fetch programas:', res.statusText);
+    }
+  } catch (error) {
+    console.error('Error fetching programas on server:', error);
+  }
+
   return (
-    <GestionAlumnosClient initialUsers={users} initialRoles={roles} />
+    <GestionAlumnosClient initialUsers={users} initialRoles={roles} initialProgramas={programas} />
   );
 }

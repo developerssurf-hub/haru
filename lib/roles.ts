@@ -108,7 +108,14 @@ export function buildLevelConfig(
     const folder = (programa.folder ?? '').trim() || 'Lecciones';
 
     // El programa puede tener su mapeo_lecciones relacionado directamente
-    const mapeo = programa.mapeo_lecciones;
+    // Handle both flattened structure and nested Strapi v5 .data.attributes structure
+    let mapeo = programa.mapeo_lecciones;
+    if (mapeo && mapeo.data && mapeo.data.attributes) {
+      mapeo = { ...mapeo.data.attributes, id: mapeo.data.id, documentId: mapeo.data.documentId };
+    } else if (mapeo && mapeo.attributes) {
+      mapeo = { ...mapeo.attributes, id: mapeo.id, documentId: mapeo.documentId };
+    }
+
     const mapeoDoc = mapeo?.documentId ?? mapeo?.id?.toString();
     const inicio = Number(mapeo?.LeccionInicio ?? mapeo?.leccionInicio ?? 1);
     const fin    = Number(mapeo?.LeccionFin    ?? mapeo?.leccionFin    ?? 50);

@@ -17,7 +17,7 @@ export async function GET() {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
 
-    const res = await fetch(`${STRAPI_URL}/api/users?populate=role`, {
+    const res = await fetch(`${STRAPI_URL}/api/users?populate=role&populate=programa`, {
       headers: {
         Authorization: `Bearer ${jwt}`,
       },
