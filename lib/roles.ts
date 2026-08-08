@@ -103,9 +103,10 @@ export function buildLevelConfig(
   // ── 1. Nuevo sistema: el usuario tiene un programa con mapeo de lecciones ──────────────────
   const programa = user?.programa;
   if (programa) {
-    const nombre = programa.nombre ?? roleName;
+    const nombre = programa.Nombre ?? programa.nombre ?? roleName;
     // Si folder está vacío, el default es 'Lecciones' (regla de negocio acordada)
-    const folder = (programa.folder ?? '').trim() || 'Lecciones';
+    const rawFolder = programa.Folder ?? programa.folder ?? '';
+    const folder = rawFolder.trim() || 'Lecciones';
 
     // El programa puede tener su mapeo_lecciones relacionado directamente
     // Handle both flattened structure and nested Strapi v5 .data.attributes structure
