@@ -80,7 +80,7 @@ export default function CampusSidebar({
 
       {isDirectora && (
         <RoleSwitcher
-          currentRole={simulatedRole || 'Año I Adultos'}
+          currentRole={simulatedRole || 'Directora'}
           availableRoles={availableRoles}
         />
       )}
@@ -137,6 +137,7 @@ export default function CampusSidebar({
                   <>
                     <SidebarLink href="/campus/gestion-cursos">Gestión de Cursos</SidebarLink>
                     <SidebarLink href="/campus/gestion-alumnos">Gestión de Alumnos</SidebarLink>
+                    <SidebarLink href="/campus/gestion-examenes">Gestión de Exámenes</SidebarLink>
                   </>
                 )}
               </div>

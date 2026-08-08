@@ -24,7 +24,12 @@ export async function getMe() {
       }
     );
 
-    if (!res.ok) return null;
+    if (!res.ok) {
+      console.log(`DEBUG: getMe failed. Status: ${res.status} ${res.statusText}`);
+      const text = await res.text();
+      console.log(`DEBUG: getMe error response:`, text);
+      return null;
+    }
 
     let data = await res.json();
 
@@ -46,6 +51,7 @@ export async function getMe() {
     // Debug: escribe el usuario a un archivo para diagnóstico
     const fs = require('fs');
     fs.writeFileSync('debug_strapi.json', JSON.stringify(data, null, 2));
+    console.log("DEBUG: getMe SUCCESS. User id:", data.id);
     return data;
   } catch (error) {
     console.error("DEBUG: Error fetching user me:", error);
@@ -67,7 +73,7 @@ export async function getEffectiveRole() {
   if (actualRole === 'Directora') {
     const cookieStore = await cookies();
     const simulatedRole = cookieStore.get("simulated_role")?.value;
-    return simulatedRole || 'Año I Adultos';
+    return simulatedRole || 'Directora';
   }
 
   return actualRole || null;

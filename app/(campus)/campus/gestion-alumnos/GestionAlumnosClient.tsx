@@ -54,6 +54,10 @@ interface UserType {
     id: number;
     name: string;
   } | null;
+  programa?: {
+    documentId: string;
+    Nombre: string;
+  } | null;
 }
 
 interface RoleType {
@@ -62,14 +66,23 @@ interface RoleType {
   description: string;
 }
 
+interface ProgramaType {
+  id: number;
+  documentId: string;
+  Nombre: string;
+  Folder?: string;
+}
+
 interface Props {
   initialUsers: UserType[];
   initialRoles: RoleType[];
+  initialProgramas: ProgramaType[];
 }
 
-export default function GestionAlumnosClient({ initialUsers, initialRoles }: Props) {
+export default function GestionAlumnosClient({ initialUsers, initialRoles, initialProgramas }: Props) {
   const [users, setUsers] = useState<UserType[]>(initialUsers);
   const [roles] = useState<RoleType[]>(initialRoles);
+  const [programas] = useState<ProgramaType[]>(initialProgramas);
   const [searchTerm, setSearchTerm] = useState('');
 
   // Modals state
@@ -86,7 +99,8 @@ export default function GestionAlumnosClient({ initialUsers, initialRoles }: Pro
     EDAD: '',
     Documento: '',
     PROVINCIA: '',
-    roleId: '',
+    roleId: '', // Mantendremos roleId oculto o lo asignaremos automático
+    programaId: '',
     activo: true,
     LeccionInicio: '',
     LeccionFin: '',
@@ -109,13 +123,27 @@ export default function GestionAlumnosClient({ initialUsers, initialRoles }: Pro
     }
   };
 
-  const isParticularesRole = (roleId?: string) => {
-    return roleId ? roles.find((r) => String(r.id) === roleId)?.name === 'Particulares' : false;
+  const isParticularesRole = (programaId?: string) => {
+    const prog = programas.find((p) => p.documentId === programaId);
+    return prog ? prog.Nombre.toLowerCase().includes('particular') : false;
   };
 
-  // Pre-fill fields for adding new student with a specific role
-  const handleOpenAddModal = (roleName: string) => {
-    const roleObj = roles.find(r => r.name === roleName);
+  // Helper para buscar el id del rol "Estudiante", "Alumno" o el primero disponible
+  const getBaseRoleId = () => {
+    const estudianteRole = roles.find(r => r.name.toLowerCase() === 'estudiante');
+    if (estudianteRole) return String(estudianteRole.id);
+    
+    const alumnoRole = roles.find(r => r.name.toLowerCase() === 'alumno');
+    if (alumnoRole) return String(alumnoRole.id);
+    
+    const authRole = roles.find(r => r.name.toLowerCase() === 'authenticated');
+    if (authRole) return String(authRole.id);
+    
+    return roles[0] ? String(roles[0].id) : '';
+  };
+
+  // Pre-fill fields for adding new student with a specific programa
+  const handleOpenAddModal = (programaDocumentId: string) => {
     setFormData({
       username: '',
       email: '',
@@ -123,7 +151,8 @@ export default function GestionAlumnosClient({ initialUsers, initialRoles }: Pro
       EDAD: '',
       Documento: '',
       PROVINCIA: '',
-      roleId: roleObj ? String(roleObj.id) : '',
+      roleId: getBaseRoleId(),
+      programaId: programaDocumentId,
       activo: true,
       LeccionInicio: '',
       LeccionFin: '',
@@ -133,7 +162,7 @@ export default function GestionAlumnosClient({ initialUsers, initialRoles }: Pro
     setIsAddModalOpen(true);
   };
 
-  // Open Add modal without preset role (global Add button)
+  // Open Add modal without preset programa (global Add button)
   const handleOpenAddNew = () => {
     setFormData({
       username: '',
@@ -142,7 +171,8 @@ export default function GestionAlumnosClient({ initialUsers, initialRoles }: Pro
       EDAD: '',
       Documento: '',
       PROVINCIA: '',
-      roleId: '',
+      roleId: getBaseRoleId(),
+      programaId: '',
       activo: true,
       LeccionInicio: '',
       LeccionFin: '',
@@ -162,7 +192,8 @@ export default function GestionAlumnosClient({ initialUsers, initialRoles }: Pro
       EDAD: user.EDAD ? String(user.EDAD) : '',
       Documento: user.Documento || '',
       PROVINCIA: user.PROVINCIA || '',
-      roleId: user.role ? String(user.role.id) : '',
+      roleId: user.role ? String(user.role.id) : getBaseRoleId(),
+      programaId: user.programa ? user.programa.documentId : '',
       activo: !user.blocked,
       LeccionInicio: user.LeccionInicio ? String(user.LeccionInicio) : user.leccionInicio ? String(user.leccionInicio) : '',
       LeccionFin: user.LeccionFin ? String(user.LeccionFin) : user.leccionFin ? String(user.leccionFin) : '',
@@ -211,18 +242,21 @@ export default function GestionAlumnosClient({ initialUsers, initialRoles }: Pro
     setFormError(null);
     setFormSuccess(null);
 
-    if (!formData.username.trim() || !formData.email.trim() || !formData.password.trim() || !formData.roleId) {
-      setFormError('Nombre, Email, Contraseña y Rol son campos obligatorios.');
+    if (!formData.username.trim() || !formData.email.trim() || !formData.password.trim() || !formData.programaId) {
+      setFormError('Nombre, Email, Contraseña y Programa son campos obligatorios.');
       return;
     }
 
     setSubmitting(true);
     try {
+      const selectedProg = programas.find(p => p.documentId === formData.programaId);
+      
       const payload: Record<string, unknown> = {
         username: formData.username,
         email: formData.email,
         password: formData.password,
-        role: Number(formData.roleId),
+        role: Number(getBaseRoleId()), // Forzar siempre el rol unificado (Estudiante/Alumno)
+        programa: selectedProg ? selectedProg.id : null,
         blocked: !formData.activo,
         EDAD: formData.EDAD ? Number(formData.EDAD) : null,
         Documento: formData.Documento,
@@ -230,7 +264,7 @@ export default function GestionAlumnosClient({ initialUsers, initialRoles }: Pro
         confirmed: true,
       };
 
-      if (isParticularesRole(formData.roleId)) {
+      if (isParticularesRole(formData.programaId)) {
         payload.LeccionInicio = formData.LeccionInicio ? Number(formData.LeccionInicio) : null;
         payload.LeccionFin = formData.LeccionFin ? Number(formData.LeccionFin) : null;
       }
@@ -271,17 +305,20 @@ export default function GestionAlumnosClient({ initialUsers, initialRoles }: Pro
 
     if (!selectedUser) return;
 
-    if (!formData.username.trim() || !formData.email.trim() || !formData.roleId) {
-      setFormError('Nombre, Email y Rol son campos obligatorios.');
+    if (!formData.username.trim() || !formData.email.trim() || !formData.programaId) {
+      setFormError('Nombre, Email y Programa son campos obligatorios.');
       return;
     }
 
     setSubmitting(true);
     try {
+      const selectedProg = programas.find(p => p.documentId === formData.programaId);
+      
       const payload: Record<string, unknown> = {
         username: formData.username,
         email: formData.email,
-        role: Number(formData.roleId),
+        role: Number(getBaseRoleId()), // Migrar automáticamente al rol unificado al guardar
+        programa: selectedProg ? selectedProg.id : null,
         blocked: !formData.activo,
         EDAD: formData.EDAD ? Number(formData.EDAD) : null,
         Documento: formData.Documento,
@@ -292,7 +329,7 @@ export default function GestionAlumnosClient({ initialUsers, initialRoles }: Pro
         payload.password = formData.password;
       }
 
-      if (isParticularesRole(formData.roleId)) {
+      if (isParticularesRole(formData.programaId)) {
         payload.LeccionInicio = formData.LeccionInicio ? Number(formData.LeccionInicio) : null;
         payload.LeccionFin = formData.LeccionFin ? Number(formData.LeccionFin) : null;
       }
@@ -411,24 +448,24 @@ export default function GestionAlumnosClient({ initialUsers, initialRoles }: Pro
 
         {/* ── Role Groups ──────────────────────────────────────────── */}
         <div className="space-y-12">
-          {STUDENT_ROLES.map((roleDef) => {
-            // Filter students who have this specific role
+          {programas.map((prog) => {
+            // Filter students who are assigned to this specific program
             const roleStudents = filteredUsers.filter(
-              u => u.role?.name === roleDef.name
+              u => u.programa?.documentId === prog.documentId
             );
 
             return (
-              <section key={roleDef.name} className="space-y-4">
+              <section key={prog.documentId} className="space-y-4">
 
                 {/* Group Title Bar */}
                 <div className="bg-[#ffecf0] rounded-2xl p-4 flex items-center justify-between shadow-sm border border-pink-100 hover:shadow-md transition-all duration-300">
                   <h2 className="text-lg font-bold font-serif text-[#8e004a] uppercase tracking-wide">
-                    {roleDef.label}
+                    {prog.Nombre}
                   </h2>
                   <button
-                    onClick={() => handleOpenAddModal(roleDef.name)}
+                    onClick={() => handleOpenAddModal(prog.documentId)}
                     className="w-9 h-9 rounded-full bg-[#8e004a] text-white flex items-center justify-center hover:bg-[#3e001d] transition-all transform hover:scale-105 active:scale-95 shadow-md"
-                    title={`Añadir alumno a ${roleDef.label}`}
+                    title={`Añadir alumno a ${prog.Nombre}`}
                   >
                     <Plus className="w-5 h-5 font-bold" />
                   </button>
@@ -520,6 +557,99 @@ export default function GestionAlumnosClient({ initialUsers, initialRoles }: Pro
               </section>
             );
           })}
+
+          {/* Unassigned Students Group */}
+          {(() => {
+            const unassignedStudents = filteredUsers.filter(
+              u => !u.programa || !u.programa.documentId
+            );
+
+            if (unassignedStudents.length === 0) return null;
+
+            return (
+              <section key="unassigned" className="space-y-4">
+                <div className="bg-zinc-100 rounded-2xl p-4 flex items-center justify-between shadow-sm border border-zinc-200 hover:shadow-md transition-all duration-300">
+                  <h2 className="text-lg font-bold font-serif text-zinc-600 uppercase tracking-wide">
+                    Sin Programa Asignado
+                  </h2>
+                </div>
+
+                <div className="bg-white rounded-2xl shadow-sm border border-zinc-100 overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse min-w-[700px]">
+                      <thead>
+                        <tr className="bg-zinc-50 border-b border-zinc-100">
+                          <th className="p-4 text-xs font-bold text-zinc-500 uppercase tracking-wider">Nombre</th>
+                          <th className="p-4 text-xs font-bold text-zinc-500 uppercase tracking-wider">Email</th>
+                          <th className="p-4 text-xs font-bold text-zinc-500 uppercase tracking-wider">Edad</th>
+                          <th className="p-4 text-xs font-bold text-zinc-500 uppercase tracking-wider">DNI</th>
+                          <th className="p-4 text-xs font-bold text-zinc-500 uppercase tracking-wider">Provincia</th>
+                          <th className="p-4 text-xs font-bold text-zinc-500 uppercase tracking-wider">Activo</th>
+                          <th className="p-4 text-xs font-bold text-zinc-500 uppercase tracking-wider text-right">Acciones</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-zinc-50">
+                        {unassignedStudents.map((user) => (
+                          <tr key={user.id} className="hover:bg-zinc-50/50 transition-colors">
+                            <td className="p-4">
+                              <span className="font-semibold text-sm text-[var(--neutral-900)]">
+                                {user.username}
+                              </span>
+                            </td>
+                            <td className="p-4 text-sm text-zinc-600">
+                              {user.email}
+                            </td>
+                            <td className="p-4 text-sm text-zinc-600">
+                              {user.EDAD ?? '-'}
+                            </td>
+                            <td className="p-4 text-sm text-zinc-600 font-mono">
+                              {user.Documento ?? '-'}
+                            </td>
+                            <td className="p-4 text-sm text-zinc-600">
+                              {user.PROVINCIA ?? '-'}
+                            </td>
+                            <td className="p-4">
+                              <div className="relative inline-block">
+                                <button
+                                  onClick={() => handleToggleActive(user)}
+                                  className={`flex items-center gap-1 text-xs font-bold px-3 py-1.5 rounded-xl border transition-all cursor-pointer shadow-sm active:scale-95 ${!user.blocked
+                                      ? 'bg-green-50 text-green-700 border-green-200 hover:bg-green-100'
+                                      : 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100'
+                                    }`}
+                                  title="Haz clic para cambiar el estado"
+                                >
+                                  <span>{!user.blocked ? 'True' : 'False'}</span>
+                                  <ChevronDown className="w-3.5 h-3.5 opacity-60" />
+                                </button>
+                              </div>
+                            </td>
+                            <td className="p-4 text-right">
+                              <div className="flex items-center justify-end gap-2">
+                                <button
+                                  onClick={() => handleOpenEditModal(user)}
+                                  className="p-2 text-zinc-500 hover:text-[var(--primary-700)] hover:bg-[var(--primary-100)] rounded-xl transition-all"
+                                  title="Editar perfil de alumno"
+                                >
+                                  <Pencil className="w-4.5 h-4.5" />
+                                </button>
+                                <button
+                                  onClick={() => handleOpenDeleteModal(user)}
+                                  className="p-2 text-zinc-500 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all"
+                                  title="Eliminar alumno"
+                                >
+                                  <Trash2 className="w-4.5 h-4.5" />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </section>
+            );
+          })()}
         </div>
       </div>
 
@@ -675,19 +805,19 @@ export default function GestionAlumnosClient({ initialUsers, initialRoles }: Pro
                     </div>
                   </div>
 
-                  {/* Role Selection */}
+                  {/* Programa Selection */}
                   <div>
-                    <label className="block text-xs font-bold text-zinc-500 uppercase tracking-wider mb-1">Rol / Año Académico *</label>
+                    <label className="block text-xs font-bold text-zinc-500 uppercase tracking-wider mb-1">Programa Asignado *</label>
                     <select
                       required
-                      value={formData.roleId}
-                      onChange={(e) => setFormData(prev => ({ ...prev, roleId: e.target.value }))}
+                      value={formData.programaId}
+                      onChange={(e) => setFormData(prev => ({ ...prev, programaId: e.target.value }))}
                       className="w-full bg-zinc-50 border border-zinc-200 rounded-xl p-3 text-sm text-[var(--neutral-900)] outline-none focus:border-[var(--primary-500)] focus:bg-white transition-all appearance-none cursor-pointer"
                     >
-                      <option value="" disabled>Selecciona un rol académico</option>
-                      {roles.map((r) => (
-                        <option key={r.id} value={r.id}>
-                          {r.name}
+                      <option value="" disabled>Selecciona un programa</option>
+                      {programas.map((p) => (
+                        <option key={p.documentId} value={p.documentId}>
+                          {p.Nombre}
                         </option>
                       ))}
                     </select>
@@ -927,19 +1057,19 @@ export default function GestionAlumnosClient({ initialUsers, initialRoles }: Pro
                     </div>
                   </div>
 
-                  {/* Role Selection */}
+                  {/* Programa Selection */}
                   <div>
-                    <label className="block text-xs font-bold text-zinc-500 uppercase tracking-wider mb-1">Rol / Año Académico *</label>
+                    <label className="block text-xs font-bold text-zinc-500 uppercase tracking-wider mb-1">Programa Asignado *</label>
                     <select
                       required
-                      value={formData.roleId}
-                      onChange={(e) => setFormData(prev => ({ ...prev, roleId: e.target.value }))}
+                      value={formData.programaId}
+                      onChange={(e) => setFormData(prev => ({ ...prev, programaId: e.target.value }))}
                       className="w-full bg-zinc-50 border border-zinc-200 rounded-xl p-3 text-sm text-[var(--neutral-900)] outline-none focus:border-[var(--primary-500)] focus:bg-white transition-all appearance-none cursor-pointer"
                     >
-                      <option value="" disabled>Selecciona un rol académico</option>
-                      {roles.map((r) => (
-                        <option key={r.id} value={r.id}>
-                          {r.name}
+                      <option value="" disabled>Selecciona un programa</option>
+                      {programas.map((p) => (
+                        <option key={p.documentId} value={p.documentId}>
+                          {p.Nombre}
                         </option>
                       ))}
                     </select>

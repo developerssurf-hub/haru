@@ -177,7 +177,7 @@ export async function getProgramasAction() {
     // populate mapeo_lecciones para obtener el rango directamente
     const res = await fetchStrapi(
       "programas",
-      "populate[mapeo_lecciones]=true&pagination[limit]=100",
+      "populate=mapeo_lecciones&pagination[limit]=100",
       jwt
     );
 
@@ -226,5 +226,98 @@ export async function getProgramasAction() {
   } catch (error: any) {
     console.error("DEBUG getProgramasAction error:", error);
     return { success: false, error: error.message || "Error al obtener programas.", isStrapiDown: true };
+  }
+}
+
+export async function createProgramaAction(data: {
+  nombre: string;
+  folder: string;
+  LeccionInicio: number;
+  LeccionFin: number;
+}) {
+  try {
+    if (!(await isAuthorized())) return { success: false, error: "No autorizado." };
+    const cookieStore = await cookies();
+    const jwt = cookieStore.get("jwt")?.value;
+    if (!jwt) return { success: false, error: "Sesión no válida o expirada." };
+
+    // 1. Create mapeo_lecciones entry first
+    const mapeoPayload = {
+      ProgramaNombre: data.nombre,
+      LeccionInicio: data.LeccionInicio,
+      LeccionFin: data.LeccionFin,
+    };
+    console.log("DEBUG: Creating mapeo_lecciones with payload:", mapeoPayload);
+    const mapeoRes = await postStrapi("mapeo-lecciones", mapeoPayload, jwt);
+    console.log("DEBUG: mapeo_lecciones response:", JSON.stringify(mapeoRes));
+    if (!mapeoRes || mapeoRes.error) {
+      return { success: false, error: "Error al crear el mapeo de lecciones vinculado." };
+    }
+    const mapeoId = mapeoRes.data?.documentId || mapeoRes.data?.id;
+    console.log("DEBUG: Extracted mapeoId:", mapeoId);
+
+    // 2. Create programa linked to the mapeo
+    const progPayload = {
+      Nombre: data.nombre,
+      Folder: data.folder,
+      mapeo_lecciones: { connect: [mapeoId] },
+    };
+    console.log("DEBUG: Creating programas with payload:", JSON.stringify(progPayload));
+    const progRes = await postStrapi("programas", progPayload, jwt);
+    console.log("DEBUG: programas response:", JSON.stringify(progRes));
+    if (!progRes || progRes.error) {
+      return { success: false, error: "Error al crear el programa." };
+    }
+
+    revalidatePath("/campus");
+    revalidatePath("/campus/mapeo-lecciones");
+    return { success: true, data: progRes.data };
+  } catch (error: any) {
+    return { success: false, error: error.message || "Error interno al crear programa." };
+  }
+}
+
+export async function updateProgramaAction(data: {
+  documentId?: string;
+  id?: number | string;
+  nombre: string;
+  folder: string;
+  mapeoDocumentId?: string;
+  LeccionInicio: number;
+  LeccionFin: number;
+}) {
+  try {
+    if (!(await isAuthorized())) return { success: false, error: "No autorizado." };
+    const cookieStore = await cookies();
+    const jwt = cookieStore.get("jwt")?.value;
+    if (!jwt) return { success: false, error: "Sesión no válida o expirada." };
+
+    // 1. Update mapeo_lecciones if exists
+    if (data.mapeoDocumentId) {
+      const mapeoPayload = {
+        ProgramaNombre: data.nombre,
+        LeccionInicio: data.LeccionInicio,
+        LeccionFin: data.LeccionFin,
+      };
+      await putStrapi("mapeo-lecciones", data.mapeoDocumentId, mapeoPayload, jwt);
+    }
+
+    // 2. Update programa
+    const progPayload = {
+      Nombre: data.nombre,
+      Folder: data.folder,
+    };
+    const targetId = data.documentId || String(data.id);
+    const progRes = await putStrapi("programas", targetId, progPayload, jwt);
+    
+    if (!progRes || progRes.error) {
+      return { success: false, error: "Error al actualizar el programa." };
+    }
+
+    revalidatePath("/campus");
+    revalidatePath("/campus/mapeo-lecciones");
+    return { success: true, data: progRes.data };
+  } catch (error: any) {
+    return { success: false, error: error.message || "Error interno al actualizar programa." };
   }
 }
