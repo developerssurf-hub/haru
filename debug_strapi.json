@@ -1,5 +1,5 @@
 {
-  "id": 1,
+  "id": 3,
   "documentId": "yf99uo41fc5o85a6z36ubpwk",
   "username": "Juan David torres Garcia",
   "email": "dharu1566@gmail.com",
@@ -18,13 +18,14 @@
   "LeccionInicio": null,
   "LeccionFin": null,
   "role": {
-    "id": 12,
+    "id": 16,
     "documentId": "yu79y6esqdb7kftvuufqsxkl",
     "name": "Directora",
     "description": "Rol para ver toda la plataforma",
     "type": "directora",
     "createdAt": "2026-05-13T01:58:06.092Z",
-    "updatedAt": "2026-05-21T23:57:19.513Z",
+    "updatedAt": "2026-08-07T19:38:59.515Z",
     "publishedAt": "2026-05-13T01:58:06.092Z"
-  }
+  },
+  "programa": null
 }
