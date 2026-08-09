@@ -99,6 +99,14 @@ export async function getLessonFolder(
   const nameQuery = namePatterns.map(n => `name = '${n}'`).join(' or ');
 
   const leccionesFolderId = await getSubfolder(rootId, leccionesFolderName);
+  
+  // Si no se encuentra la carpeta y NO es la por defecto, evitamos buscar en la raíz
+  // para no mezclar contenido de otros cursos.
+  if (!leccionesFolderId && leccionesFolderName.toLowerCase() !== 'lecciones') {
+    console.log(`DEBUG: Carpeta '${leccionesFolderName}' no encontrada. Evitando fallback al root.`);
+    return null;
+  }
+
   const parentId = leccionesFolderId || rootId;
 
   const res = await drive.files.list({
@@ -112,7 +120,8 @@ export async function getLessonFolder(
     return res.data.files[0];
   }
 
-  if (parentId !== rootId) {
+  // Fallback a root solo si estábamos buscando en la carpeta 'Lecciones' o si parentId == rootId.
+  if (parentId !== rootId && leccionesFolderName.toLowerCase() === 'lecciones') {
     const resRoot = await drive.files.list({
       q: `'${rootId}' in parents and (${nameQuery}) and mimeType = 'application/vnd.google-apps.folder' and trashed = false`,
       fields: 'files(id,name,description)',
@@ -201,6 +210,12 @@ export async function getAvailableLessons(
 
   try {
     const leccionesFolderId = await getSubfolder(rootId, leccionesFolderName);
+    
+    if (!leccionesFolderId && leccionesFolderName.toLowerCase() !== 'lecciones') {
+      console.log(`DEBUG: Carpeta específica '${leccionesFolderName}' no encontrada. Retornando vacío para no mezclar contenido.`);
+      return [];
+    }
+
     const parentId = leccionesFolderId || rootId;
     console.log(`DEBUG: parentId='${parentId}' (folder='${leccionesFolderName}')`);
 
@@ -216,8 +231,8 @@ export async function getAvailableLessons(
       f.mimeType === 'application/vnd.google-apps.folder'
     );
 
-    // Fallback al root si no se encontró nada en la carpeta específica
-    if (lessons.length === 0 && parentId !== rootId) {
+    // Fallback al root solo si la carpeta es la por defecto
+    if (lessons.length === 0 && parentId !== rootId && leccionesFolderName.toLowerCase() === 'lecciones') {
       const resRoot = await drive.files.list({
         q: `'${rootId}' in parents and trashed = false`,
         fields: 'files(id,name,mimeType)',
