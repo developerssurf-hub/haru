@@ -2,6 +2,7 @@ import { getLessonMeta } from '@/lib/google-drive';
 import { cookies } from 'next/headers';
 import { fetchStrapi } from '@/lib/strapi';
 import { getEffectiveRole, getMe } from '@/lib/user';
+import { buildLevelConfig } from '@/lib/roles';
 import LeccionTabs from './LeccionTabs';
 import Image from 'next/image';
 import LessonListMobile from './LessonListMobile';
@@ -12,13 +13,15 @@ export default async function LeccionPage({
   params: Promise<{ leccion: string }>;
 }) {
   const { leccion } = await params;
-  const level = await getEffectiveRole();
+  const user = await getMe();
+  const effectiveRole = await getEffectiveRole();
+  const levelConfig = buildLevelConfig(user, effectiveRole);
 
   // Fetch lesson metadata from Drive (portada, description, subfolder IDs)
   // Falls back gracefully when Drive is not configured (dev without .env.local)
   let meta;
   try {
-    meta = await getLessonMeta(leccion, level);
+    meta = await getLessonMeta(leccion, levelConfig);
   } catch {
     meta = {
       leccion,
@@ -31,8 +34,7 @@ export default async function LeccionPage({
 
   // If role is Particulares, fetch its specific lesson range from the user object
   let particularesRange: { LeccionInicio: number; LeccionFin: number } | null = null;
-  if (level === 'Particulares') {
-    const user = await getMe();
+  if (effectiveRole === 'Particulares') {
     if (user) {
       const inicio = Number(user.LeccionInicio ?? user.leccionInicio ?? 1);
       const fin = Number(user.LeccionFin ?? user.leccionFin ?? 1);
@@ -50,7 +52,7 @@ export default async function LeccionPage({
 
   // Show range for Particulares role
   const particularesBanner = (
-    level === 'Particulares' && particularesRange ? (
+    effectiveRole === 'Particulares' && particularesRange ? (
       <div className="bg-blue-50 text-blue-800 p-4 rounded-lg my-4">
         <p className="font-semibold">Lecciones asignadas: {particularesRange.LeccionInicio} - {particularesRange.LeccionFin}</p>
       </div>
