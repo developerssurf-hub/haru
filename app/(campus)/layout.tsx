@@ -67,6 +67,8 @@ export default async function CampusLayout({
           workshopLinks={workshopLinks}
           materialLinks={materialLinks}
           lecciones={lecciones}
+          userProgramas={user?.programas || []}
+          selectedProgramId={user?.programa?.id?.toString() || ''}
         />
       </Suspense>
 

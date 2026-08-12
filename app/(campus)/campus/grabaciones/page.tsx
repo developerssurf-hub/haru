@@ -2,6 +2,7 @@ import { getMe, getEffectiveRole } from '@/lib/user';
 import { getRecordingsForRole } from '@/lib/google-drive';
 import { redirect } from 'next/navigation';
 import GrabacionesClient from './GrabacionesClient';
+import { buildLevelConfig } from '@/lib/roles';
 
 export const metadata = {
   title: 'Grabaciones de Clase - Campus Haru',
@@ -16,12 +17,16 @@ export default async function GrabacionesPage() {
 
   const effectiveRole = await getEffectiveRole();
   const username = user.username || undefined;
-  const recordings = await getRecordingsForRole(effectiveRole || undefined, username);
+
+  const levelConfig = buildLevelConfig(user, effectiveRole);
+  const levelName = levelConfig.nombre;
+
+  const recordings = await getRecordingsForRole(levelName || undefined, username);
 
   return (
     <GrabacionesClient 
       recordings={recordings} 
-      effectiveRole={effectiveRole || 'Estudiante'} 
+      effectiveRole={levelName || effectiveRole || 'Estudiante'} 
     />
   );
 }

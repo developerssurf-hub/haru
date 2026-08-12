@@ -48,6 +48,58 @@ export async function getMe() {
       }
     }
 
+    // --- SUPPORT FOR MULTIPLE PROGRAMS ---
+    let allPrograms: any[] = [];
+    if (data.programa) {
+      if (Array.isArray(data.programa)) {
+        allPrograms = data.programa;
+      } else if (data.programa.data && Array.isArray(data.programa.data)) {
+        allPrograms = data.programa.data;
+      } else {
+        allPrograms = [data.programa];
+      }
+    }
+    
+    // Normalize nested attributes for each program
+    allPrograms = allPrograms.map(p => {
+       let normalized = p;
+       if (p.attributes) {
+          normalized = { id: p.id, ...p.attributes };
+       }
+       // Strapi fields might be capitalized, map them to lowercase for consistency
+       if (normalized.Nombre && !normalized.nombre) {
+          normalized.nombre = normalized.Nombre;
+       }
+       if (normalized.Folder && !normalized.folder) {
+          normalized.folder = normalized.Folder;
+       }
+       return normalized;
+    });
+
+    // Remove duplicates (Strapi sometimes returns duplicates in manyToMany relations)
+    const uniqueProgramsMap = new Map();
+    allPrograms.forEach(p => {
+      const uniqueKey = p.documentId || p.id;
+      if (uniqueKey && !uniqueProgramsMap.has(uniqueKey)) {
+        uniqueProgramsMap.set(uniqueKey, p);
+      }
+    });
+    allPrograms = Array.from(uniqueProgramsMap.values());
+
+    data.programas = allPrograms;
+
+    // Pick the active program from cookie
+    const activeProgramId = cookieStore.get("selected_program_id")?.value;
+    if (activeProgramId && allPrograms.length > 0) {
+      const matched = allPrograms.find(p => p.id?.toString() === activeProgramId);
+      data.programa = matched || allPrograms[0];
+    } else if (allPrograms.length > 0) {
+      data.programa = allPrograms[0];
+    } else {
+      data.programa = null;
+    }
+    // -------------------------------------
+
     // Debug: escribe el usuario a un archivo para diagnóstico
     const fs = require('fs');
     fs.writeFileSync('debug_strapi.json', JSON.stringify(data, null, 2));
@@ -77,6 +129,7 @@ export async function getMe() {
               Folder: simulatedProgram.Folder || simulatedProgram.attributes?.Folder,
               mapeo_lecciones: mappedMapeo
             };
+            data.programas = [data.programa];
           }
         }
       } catch (err) {

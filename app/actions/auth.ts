@@ -28,6 +28,7 @@ export async function logoutAction() {
   const cookieStore = await cookies();
   cookieStore.delete("jwt");
   cookieStore.delete("simulated_role");
+  cookieStore.delete("selected_program_id");
   redirect("/login");
 }
 
@@ -36,6 +37,16 @@ export async function setSimulatedRoleAction(role: string) {
   cookieStore.set("simulated_role", role, {
     path: "/",
     maxAge: 60 * 60 * 24, // 1 day
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+  });
+}
+
+export async function setActiveProgramAction(programId: string) {
+  const cookieStore = await cookies();
+  cookieStore.set("selected_program_id", programId, {
+    path: "/",
+    maxAge: 60 * 60 * 24 * 30, // 30 days
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
   });

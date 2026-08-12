@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import SidebarLink from '@/components/campus/SidebarLink';
 import RoleSwitcher from '@/components/campus/RoleSwitcher';
+import ProgramSwitcher from '@/components/campus/ProgramSwitcher';
 import type { AdditionalMaterialItem } from '@/lib/google-drive';
 import type { DriveFile } from '@/lib/google-drive';
 import { logoutAction } from '@/app/actions/auth';
@@ -16,6 +17,8 @@ interface CampusSidebarProps {
   workshopLinks: AdditionalMaterialItem[];
   materialLinks: AdditionalMaterialItem[];
   lecciones: { label: string; href: string }[];
+  userProgramas?: { id: string; nombre: string }[];
+  selectedProgramId?: string;
 }
 
 const generalLinks = [
@@ -32,6 +35,8 @@ export default function CampusSidebar({
   workshopLinks,
   materialLinks,
   lecciones,
+  userProgramas = [],
+  selectedProgramId = '',
 }: CampusSidebarProps) {
   const pathname = usePathname();
   const tallerMatch = pathname.match(/^\/campus\/taller\/([^/]+)/);
@@ -82,6 +87,12 @@ export default function CampusSidebar({
         <RoleSwitcher
           currentRole={simulatedRole || 'Directora'}
           availableRoles={availableRoles}
+        />
+      )}
+      {!isDirectora && userProgramas.length > 1 && (
+        <ProgramSwitcher
+          currentProgramId={selectedProgramId}
+          availablePrograms={userProgramas.map(p => ({ id: p.id, name: p.nombre || 'Sin nombre' }))}
         />
       )}
 
