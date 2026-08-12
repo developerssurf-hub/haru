@@ -19,6 +19,7 @@ interface CampusSidebarProps {
   lecciones: { label: string; href: string }[];
   userProgramas?: { id: string; nombre: string }[];
   selectedProgramId?: string;
+  hasPendingExams?: boolean;
 }
 
 const generalLinks = [
@@ -37,6 +38,7 @@ export default function CampusSidebar({
   lecciones,
   userProgramas = [],
   selectedProgramId = '',
+  hasPendingExams = false,
 }: CampusSidebarProps) {
   const pathname = usePathname();
   const tallerMatch = pathname.match(/^\/campus\/taller\/([^/]+)/);
@@ -140,6 +142,18 @@ export default function CampusSidebar({
                     {item.label}
                   </SidebarLink>
                 ))}
+                <div className="relative">
+                  <SidebarLink href="/campus/examenes">
+                    <div className="flex justify-between items-center w-full">
+                      <span>Exámenes</span>
+                      {hasPendingExams && (
+                        <span className="bg-indigo-600 text-white text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider shadow-sm whitespace-nowrap ml-2">
+                          Nuevo Examen
+                        </span>
+                      )}
+                    </div>
+                  </SidebarLink>
+                </div>
                 <SidebarLink href="/campus/grabaciones">Grabaciones de Clase</SidebarLink>
                 {(actualRole === 'Directora' || actualRole === 'Profesor') && (
                   <SidebarLink href="/campus/mapeo-lecciones">Mapeo de Lecciones</SidebarLink>

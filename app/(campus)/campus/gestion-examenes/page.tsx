@@ -31,12 +31,20 @@ export default async function GestionExamenesPage() {
             <h1 className="text-3xl font-bold text-gray-900">Gestión de Exámenes</h1>
             <p className="text-gray-600 mt-1">Administra los exámenes disponibles en la academia.</p>
           </div>
-          <Link 
-            href="/campus/gestion-examenes/nuevo" 
-            className="bg-indigo-600 text-white px-6 py-2.5 rounded-lg font-medium hover:bg-indigo-700 shadow-sm transition-colors"
-          >
-            + Crear Examen
-          </Link>
+          <div className="flex gap-4">
+            <Link 
+              href="/campus/gestion-examenes/resultados" 
+              className="bg-white text-indigo-600 border border-indigo-200 px-6 py-2.5 rounded-lg font-medium hover:bg-indigo-50 shadow-sm transition-colors"
+            >
+              Ver Resultados
+            </Link>
+            <Link 
+              href="/campus/gestion-examenes/nuevo" 
+              className="bg-indigo-600 text-white px-6 py-2.5 rounded-lg font-medium hover:bg-indigo-700 shadow-sm transition-colors"
+            >
+              + Crear Examen
+            </Link>
+          </div>
         </div>
 
         {strapiError ? (

@@ -1,6 +1,7 @@
 import { getAvailableLessons, getAdditionalMaterial, getCampusWorkshops } from '@/lib/google-drive';
 import { getMe, getEffectiveRole } from '@/lib/user';
 import { fetchStrapi } from '@/lib/strapi';
+import { checkPendingExams } from '@/lib/api/examenes';
 import CampusSidebar from '@/components/campus/CampusSidebar';
 import { DEFAULT_CAMPUS_ROLES, buildLevelConfig } from '@/lib/roles';
 import { cookies } from 'next/headers';
@@ -24,6 +25,12 @@ export default async function CampusLayout({
   const jwt = cookieStore.get('jwt')?.value;
 
   const isDirectora = actualRole === 'Directora';
+
+  let hasPendingExams = false;
+  if (effectiveRole !== 'Directora' && user?.id && user?.programa?.id) {
+    const pName = user?.programa?.nombre || user?.programa?.Nombre;
+    hasPendingExams = await checkPendingExams(user.id, user.programa.id, jwt || '', pName);
+  }
 
   // Fetch programas from Strapi for simulation dropdown
   let availableRoles: string[] = [];
@@ -69,6 +76,7 @@ export default async function CampusLayout({
           lecciones={lecciones}
           userProgramas={user?.programas || []}
           selectedProgramId={user?.programa?.id?.toString() || ''}
+          hasPendingExams={hasPendingExams}
         />
       </Suspense>
 

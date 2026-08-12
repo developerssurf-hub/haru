@@ -156,13 +156,31 @@ export function VistaExamen({ examen, intentos = [], alumnoId, token, onFinish }
   const totalPreguntas = attrs.preguntas?.length || 0;
   const puedeTerminar = preguntasContestadas === totalPreguntas && totalPreguntas > 0;
 
+  // Agrupar preguntas por secciones
+  const groupedSections: { titulo: string; descripcion: string; preguntas: any[] }[] = [];
+  let currentSection = { titulo: '', descripcion: '', preguntas: [] as any[] };
+  groupedSections.push(currentSection);
+
+  attrs.preguntas?.forEach((p: any) => {
+    if (p.seccion_titulo) {
+      currentSection = { 
+        titulo: p.seccion_titulo, 
+        descripcion: p.seccion_descripcion || '', 
+        preguntas: [p] 
+      };
+      groupedSections.push(currentSection);
+    } else {
+      currentSection.preguntas.push(p);
+    }
+  });
+
   return (
     <div className="max-w-3xl mx-auto py-8">
-      <div className="mb-8 bg-indigo-600 text-white rounded-2xl p-8 shadow-lg">
+      <div className="mb-8 bg-pink-600 text-white rounded-2xl p-8 shadow-lg">
         <h1 className="text-3xl font-bold mb-2">{attrs.titulo}</h1>
         {attrs.descripcion && (
           <div 
-            className="text-indigo-100 mt-4 prose prose-invert"
+            className="text-pink-100 mt-4 prose prose-invert"
             dangerouslySetInnerHTML={{ __html: attrs.descripcion }}
           />
         )}
@@ -170,32 +188,64 @@ export function VistaExamen({ examen, intentos = [], alumnoId, token, onFinish }
 
       <div className="mb-6 flex items-center justify-between bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
         <span className="text-gray-600 font-medium">Progreso</span>
-        <span className="text-indigo-600 font-bold">{preguntasContestadas} de {totalPreguntas} preguntas</span>
+        <span className="text-pink-600 font-bold">{preguntasContestadas} de {totalPreguntas} preguntas</span>
       </div>
 
-      <div className="space-y-6">
-        {attrs.preguntas?.map((pregunta: any, idx: number) => {
-          const respondidaMal = resultado?.respuestasMalas.includes(pregunta.id);
+      <div className="space-y-8">
+        {groupedSections.map((section, sIdx) => {
+          if (section.preguntas.length === 0) return null;
+          
+          const hasSectionHeader = !!section.titulo;
+          
+          const content = (
+            <div className="space-y-6">
+              {section.preguntas.map((pregunta: any) => {
+                const globalIdx = attrs.preguntas.findIndex((p: any) => p.id === pregunta.id);
+                const respondidaMal = resultado?.respuestasMalas.includes(pregunta.id);
+                return (
+                  <div key={pregunta.id} className="relative">
+                    <PreguntaItem 
+                      pregunta={pregunta} 
+                      index={globalIdx} 
+                      seleccion={respuestas[pregunta.id] || null}
+                      onSelectOption={(opcionId) => handleSelectOption(pregunta.id, opcionId)}
+                      deshabilitar={finalizado}
+                      mostrarError={finalizado && respondidaMal}
+                    />
+                    {finalizado && respondidaMal && (
+                      <div className="absolute top-4 right-4 bg-red-100 text-red-700 px-3 py-1 rounded-full text-sm font-bold border border-red-200">
+                        Respuesta Incorrecta
+                      </div>
+                    )}
+                    {finalizado && !respondidaMal && (
+                      <div className="absolute top-4 right-4 bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-bold border border-green-200">
+                        ¡Correcto!
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          );
+
+          if (hasSectionHeader) {
+            return (
+              <div key={sIdx} className="bg-white border-2 border-pink-100 rounded-2xl p-6 shadow-sm relative overflow-hidden">
+                <div className="absolute top-0 left-0 w-2 h-full bg-pink-500"></div>
+                <div className="mb-6 pb-4 border-b border-gray-100 pl-4">
+                  <h3 className="text-2xl font-bold text-gray-900">{section.titulo}</h3>
+                  {section.descripcion && (
+                    <p className="text-gray-600 mt-2">{section.descripcion}</p>
+                  )}
+                </div>
+                {content}
+              </div>
+            );
+          }
+
           return (
-            <div key={pregunta.id} className="relative">
-              <PreguntaItem 
-                pregunta={pregunta} 
-                index={idx} 
-                seleccion={respuestas[pregunta.id] || null}
-                onSelectOption={(opcionId) => handleSelectOption(pregunta.id, opcionId)}
-                deshabilitar={finalizado}
-                mostrarError={finalizado && respondidaMal}
-              />
-              {finalizado && respondidaMal && (
-                <div className="absolute top-4 right-4 bg-red-100 text-red-700 px-3 py-1 rounded-full text-sm font-bold border border-red-200">
-                  Respuesta Incorrecta
-                </div>
-              )}
-              {finalizado && !respondidaMal && (
-                <div className="absolute top-4 right-4 bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-bold border border-green-200">
-                  ¡Correcto!
-                </div>
-              )}
+            <div key={sIdx}>
+              {content}
             </div>
           );
         })}
@@ -208,7 +258,7 @@ export function VistaExamen({ examen, intentos = [], alumnoId, token, onFinish }
             disabled={!puedeTerminar || guardando}
             className={`px-8 py-3 rounded-xl font-bold transition-all ${
               puedeTerminar && !guardando
-                ? 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-md hover:shadow-lg'
+                ? 'bg-pink-600 text-white hover:bg-pink-700 shadow-md hover:shadow-lg'
                 : 'bg-gray-200 text-gray-500 cursor-not-allowed'
             }`}
           >
@@ -220,7 +270,7 @@ export function VistaExamen({ examen, intentos = [], alumnoId, token, onFinish }
       {finalizado && resultado && (
         <div className="mt-8 p-8 bg-white border border-gray-200 shadow-lg rounded-2xl text-center">
           <h2 className="text-3xl font-bold text-gray-900 mb-2">Resultados del Examen</h2>
-          <div className="text-5xl font-black text-indigo-600 my-6">
+          <div className="text-5xl font-black text-pink-600 my-6">
             {resultado.puntaje}%
           </div>
           <div className="flex justify-center gap-8 mb-6">
