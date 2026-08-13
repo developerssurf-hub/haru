@@ -55,9 +55,10 @@ interface UserType {
     name: string;
   } | null;
   programa?: {
-    documentId: string;
+    id?: number;
+    documentId?: string;
     Nombre: string;
-  } | null;
+  } | Array<{ id?: number; documentId?: string; Nombre: string; }> | null;
 }
 
 interface RoleType {
@@ -193,7 +194,11 @@ export default function GestionAlumnosClient({ initialUsers, initialRoles, initi
       Documento: user.Documento || '',
       PROVINCIA: user.PROVINCIA || '',
       roleId: user.role ? String(user.role.id) : getBaseRoleId(),
-      programaId: user.programa ? user.programa.documentId : '',
+      programaId: (() => {
+        const p = Array.isArray(user.programa) ? user.programa[0] : user.programa;
+        if (!p) return '';
+        return p.documentId || programas.find(prog => prog.id === p.id)?.documentId || '';
+      })(),
       activo: !user.blocked,
       LeccionInicio: user.LeccionInicio ? String(user.LeccionInicio) : user.leccionInicio ? String(user.leccionInicio) : '',
       LeccionFin: user.LeccionFin ? String(user.LeccionFin) : user.leccionFin ? String(user.leccionFin) : '',
@@ -450,9 +455,10 @@ export default function GestionAlumnosClient({ initialUsers, initialRoles, initi
         <div className="space-y-12">
           {programas.map((prog) => {
             // Filter students who are assigned to this specific program
-            const roleStudents = filteredUsers.filter(
-              u => u.programa?.documentId === prog.documentId
-            );
+            const roleStudents = filteredUsers.filter(u => {
+              const progs = Array.isArray(u.programa) ? u.programa : (u.programa ? [u.programa] : []);
+              return progs.some(p => p.documentId === prog.documentId || p.id === prog.id);
+            });
 
             return (
               <section key={prog.documentId} className="space-y-4">
@@ -560,9 +566,10 @@ export default function GestionAlumnosClient({ initialUsers, initialRoles, initi
 
           {/* Unassigned Students Group */}
           {(() => {
-            const unassignedStudents = filteredUsers.filter(
-              u => !u.programa || !u.programa.documentId
-            );
+            const unassignedStudents = filteredUsers.filter(u => {
+              const progs = Array.isArray(u.programa) ? u.programa : (u.programa ? [u.programa] : []);
+              return progs.length === 0 || progs.every(p => !p.documentId && !p.id);
+            });
 
             if (unassignedStudents.length === 0) return null;
 
