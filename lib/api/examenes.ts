@@ -14,19 +14,19 @@ export async function getProgramas(token?: string) {
 
 export async function getExamenes(token?: string) {
   // En Strapi v5 no se debe usar =* en campos media, mejor especificar true o listar en array
-  const query = 'populate[preguntas][populate][opciones]=true&populate[preguntas][populate][media]=true&populate[programas]=true';
+  const query = 'populate[preguntas][populate][opciones]=true&populate[preguntas][populate][media]=true&populate[preguntas][pagination][limit]=100&populate[programas]=true';
   const data = await fetchStrapi('examenes', query, token);
   return data;
 }
 
 export async function getExamen(id: number | string, token?: string) {
-  const query = 'populate[preguntas][populate][opciones]=true&populate[preguntas][populate][media]=true&populate[programas]=true';
+  const query = 'populate[preguntas][populate][opciones]=true&populate[preguntas][populate][media]=true&populate[preguntas][pagination][limit]=100&populate[programas]=true';
   const data = await fetchStrapi(`examenes/${id}`, query, token);
   return data;
 }
 
 export async function getExamenesPorPrograma(programaId: number | string, token?: string, programName?: string) {
-  const query = `populate[preguntas][populate][opciones]=true&populate[preguntas][populate][media]=true&populate[programas]=true`;
+  const query = `populate[preguntas][populate][opciones]=true&populate[preguntas][populate][media]=true&populate[preguntas][pagination][limit]=100&populate[programas]=true`;
   const data = await fetchStrapi('examenes', query, token);
   
   if (data?.data) {
