@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { fetchStrapi } from '@/lib/strapi';
 import Image from 'next/image';
 
-const API_URL = process.env.NEXT_PUBLIC_STRAPI_API_URL || 'http://localhost:1337';
+const API_URL = process.env.NEXT_PUBLIC_STRAPI_URL || 'http://localhost:1337';
 
 type BlockType = 'paragraph' | 'heading' | 'image';
 
