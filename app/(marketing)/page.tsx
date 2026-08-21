@@ -1,17 +1,22 @@
 import Image from "next/image";
 import { fetchStrapi, getStrapiMedia } from '@/lib/strapi';
 import Link from 'next/link';
+import CallToAction from "@/components/CallToAction";
 
 export default async function Home() {
   const resCursos = await fetchStrapi('cursos', 'populate=*');
   const cursosRaw = resCursos?.data || [];
   const cursosAll = Array.isArray(cursosRaw) ? cursosRaw : (cursosRaw ? [cursosRaw] : []);
-  
+
   // Only show active courses
   const cursos = cursosAll.filter((curso: any) => {
     const attributes = curso.attributes || curso;
     return attributes.Activo !== false;
   });
+
+  const whatsappUrl =
+    "https://wa.me/5491123879647?text=" +
+    encodeURIComponent("Hola, me gustaría conocer más sobre la academia.");
 
   return (
     <div className="flex flex-col gap-24 pb-24">
@@ -34,12 +39,16 @@ export default async function Home() {
               puede aprender de manera sencilla y divertida.
             </p>
             <div className="flex flex-wrap gap-4">
-              <button className="bg-primary hover:bg-primary-dark text-white px-8 py-4 rounded-full font-semibold transition-all shadow-lg hover:shadow-xl hover:-translate-y-1">
+              <Link
+                href={"/inscripcion"}
+                className="bg-primary hover:bg-primary-dark text-white px-8 py-4 rounded-full font-semibold transition-all shadow-lg hover:shadow-xl hover:-translate-y-1">
                 Empezar ahora
-              </button>
-              <button className="bg-transparent border border-primary/20 hover:border-primary text-primary px-8 py-4 rounded-full font-semibold transition-all hover:bg-primary/5">
+              </Link>
+              <Link
+                href={"/cursos"}
+                className="bg-transparent border border-primary/20 hover:border-primary text-primary px-8 py-4 rounded-full font-semibold transition-all hover:bg-primary/5">
                 Ver cursos →
-              </button>
+              </Link>
             </div>
           </div>
 
@@ -168,60 +177,10 @@ export default async function Home() {
 
       {/* CTA Section */}
       <section className="max-w-7xl mx-auto px-6 w-full">
-        <div className="premium-gradient rounded-[48px] p-12 md:p-24 text-center text-white relative overflow-hidden shadow-2xl shadow-primary/20">
-          <div className="absolute top-0 right-0 w-96 h-96 bg-white/10 rounded-full -mr-48 -mt-48 blur-3xl"></div>
-          <div className="absolute bottom-0 left-0 w-96 h-96 bg-black/10 rounded-full -ml-48 -mb-48 blur-3xl"></div>
-
-          <div className="relative z-10 flex flex-col items-center gap-8 max-w-2xl mx-auto">
-            <h2 className="text-4xl md:text-6xl font-serif leading-tight">Empieza hoy mismo</h2>
-            <p className="text-lg opacity-90 leading-relaxed">
-              Únete a nuestra comunidad de estudiosos y amantes de la cultura. Inscríbete hoy mismo
-              y recibe un kit de bienvenida gratuito que incluye materiales profesionales de caligrafía.
-            </p>
-            <div className="flex flex-wrap justify-center gap-6">
-              <button className="bg-white text-primary px-10 py-5 rounded-full font-bold hover:scale-105 transition-all shadow-xl">
-                Apply to Academy
-              </button>
-              <button className="bg-transparent border border-white/30 hover:bg-white/10 text-white px-10 py-5 rounded-full font-bold transition-all">
-                Download Prospectus
-              </button>
-            </div>
-          </div>
-        </div>
+        <CallToAction whatsappUrl={whatsappUrl} />
       </section>
 
-      {/* History Section */}
-      <section className="max-w-7xl mx-auto px-6 w-full grid grid-cols-1 md:grid-cols-2 gap-16 items-center">
-        <div className="flex flex-col gap-8">
-          <h2 className="text-5xl font-serif text-text">Nuestra Historia</h2>
-          <div className="w-20 h-1 bg-primary"></div>
-          <div className="space-y-6 text-text-muted leading-relaxed">
-            <p >
-              Siempre nos preguntan por qué nuestra academia se llama Haru Yo Koi (春よ来い – "La primavera vendrá")
-            </p>
-            <p className="italic font-medium text-text">
-              Detrás de este nombre hay una historia de amor y pasión por el idioma japonés.
-            </p>
-            <p>
-              Nuestra fundadora, <b>Sensei Norma Kerwin</b>, encontró su inspiración en el estudio del japonés, un idioma armonioso y espiritual. Sin embargo, la verdadera chispa que dio vida a la academia surgió en el <b>2018</b>, cuando el patinador japonés <b>Yuzuru Hanyu</b> realizó una presentación con la canción <b>Haru Yo Koi</b>, como tributo a su madre. Esta canción, interpretada por Arai Yumi en 1994, representa la espera paciente y la certeza de que, con esfuerzo y dedicación, los sueños pueden hacerse realidad.
-            </p>
-            <p>Siguiendo este espíritu de constancia y perseverancia, nació nuestra academia. Aquí, cada estudiante encuentra un lugar donde crecer, aprender y descubrir el hermoso idioma japonés, tal como nuestra fundadora encontró en él su ikigai, su razón de ser.</p>
-            <p>
-              En Haru Yo Koi, creemos que la primavera siempre llega. Solo hay que trabajar con paciencia
-              y dedicación para alcanzar nuestras metas. 🌸
-            </p>
-          </div>
-        </div>
-        <div className="relative w-full h-full rounded-[40px] overflow-hidden shadow-2xl">
 
-          <Image
-            src="/norma.jpg"
-            alt="History"
-            fill
-            className="object-cover"
-          />
-        </div>
-      </section>
     </div>
   );
 }

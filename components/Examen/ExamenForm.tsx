@@ -19,7 +19,8 @@ export function ExamenForm({ token, initialData, examenId }: { token: string, in
   const formatForInput = (dateStr?: string) => {
     if (!dateStr) return '';
     const d = new Date(dateStr);
-    return d.toISOString().slice(0, 16);
+    const pad = (n: number) => n.toString().padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
   };
 
   const [fechaApertura, setFechaApertura] = useState(formatForInput(initialData?.fecha_apertura));

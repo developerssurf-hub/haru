@@ -2,33 +2,27 @@ import Image from "next/image";
 import Link from "next/link";
 import { fetchStrapi, getStrapiMedia } from "@/lib/strapi";
 
-export default async function BlogPage() {
+export default async function JaponGratisPage() {
   // Fetching real data from Strapi - Updated to 'blogs'
   const response = await fetchStrapi('blogs', 'populate=*');
   const allPosts = response?.data || [];
 
-  // Filtrar posts para la sección de blog / cultura
-  const posts = allPosts.filter((post: any) => {
-    // Para la pestaña 'blog', mostramos los que no tienen etiqueta o tienen 'blog'
-    return !post.Tag || post.Tag === 'blog';
-  });
+  // Filtrar posts de gramática / Japonés gratis
+  const posts = allPosts.filter((post: any) => post.Tag === 'gramatica');
 
   return (
     <div className="bg-background min-h-screen">
-      {/* Header del Blog */}
+      {/* Header */}
       <section className="pt-20 pb-8 px-6 text-center">
         <div className="max-w-3xl mx-auto flex flex-col gap-4">
-
           <h1 className="text-5xl md:text-7xl font-serif text-neutral-900 leading-tight">
-            Cultura y Tradición <span className="text-primary-500 italic">Japonesa</span>
+            Japonés Gratis
           </h1>
         </div>
       </section>
 
-
-
       {/* Grid de Artículos */}
-      <section className="px-6 pb-24">
+      <section className="px-6 pb-24 pt-8">
         <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
           {posts.length > 0 ? (
             posts.map((post: any) => {
@@ -38,13 +32,9 @@ export default async function BlogPage() {
               const slug = post.Slug;
               const publishedAt = post.publishedAt;
 
-              // SIGUIENDO TU JSON: post.Miniatura.url
-              // Pero lo hacemos robusto para Strapi 5 (puede ser objeto, array o con wrapper data)
               const miniatura = post.Miniatura;
 
-              // Intentamos obtener la URL de varias formas comunes en Strapi
               let imageUrl = null;
-
               if (miniatura) {
                 if (Array.isArray(miniatura)) {
                   imageUrl = miniatura[0]?.url || miniatura[0]?.attributes?.url;
@@ -74,7 +64,6 @@ export default async function BlogPage() {
                     ) : (
                       <div className="w-full h-full flex flex-col items-center justify-center text-neutral-400 italic bg-neutral-100">
                         <span className="text-[10px]">Sin Imagen</span>
-                        {/* Debug opcional para ti: <span className="text-[8px]">{JSON.stringify(imageUrl)}</span> */}
                       </div>
                     )}
                   </div>
@@ -107,7 +96,7 @@ export default async function BlogPage() {
           ) : (
             <div className="col-span-full py-20 text-center flex flex-col items-center gap-4">
               <span className="text-4xl text-neutral-300">🌸</span>
-              <p className="text-neutral-500 italic">Cargando artículos desde la bitácora...</p>
+              <p className="text-neutral-500 italic">Cargando artículos...</p>
             </div>
           )}
         </div>

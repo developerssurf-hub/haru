@@ -3,9 +3,10 @@ import Link from "next/link";
 export default function Footer() {
   const links = [
     { name: "Cursos", href: "/cursos" },
-    { name: "Cultura", href: "/cultura" },
+    { name: "Japonés Gratis", href: "/jpg" },
     { name: "Blog", href: "/blog" },
-    { name: "About", href: "/about" },
+    { name: "nosotros", href: "/about" },
+    { name: "Inscripción", href: "/inscripcion" },
   ];
 
   return (

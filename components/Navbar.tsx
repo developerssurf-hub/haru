@@ -2,8 +2,11 @@ import Link from "next/link";
 
 export default function Navbar() {
   const navLinks = [
+    { name: "Inicio", href: "/" },
     { name: "Cursos", href: "/cursos" },
     { name: "Blog", href: "/blog" },
+    { name: "Japonés Gratis", href: "/jpg" },
+    { name: "Inscripción", href: "/inscripcion" },
     { name: "Nosotros", href: "/about" },
   ];
 
@@ -52,7 +55,7 @@ export default function Navbar() {
             <polyline points="10 17 15 12 10 7" />
             <line x1="15" y1="12" x2="3" y2="12" />
           </svg>
-          Sign In
+          Ingresar al Campus
         </Link>
       </div>
     </nav>

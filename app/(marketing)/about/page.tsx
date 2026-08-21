@@ -7,6 +7,7 @@ import {
   Mail,
   MessageCircle,
 } from "lucide-react";
+import CallToAction from "@/components/CallToAction";
 
 export const metadata = {
   title: "About | Academia Haru Yo Koi",
@@ -107,200 +108,53 @@ export default function AboutPage() {
         </div>
       </section>
 
-      {/* Cabecera — estilo artículo de blog */}
-      <section className="pt-20 pb-12 px-6 text-reveal">
-        <div className="max-w-4xl mx-auto flex flex-col gap-8">
-          <Link
-            href="/"
-            className="text-[var(--primary-main)] font-bold text-sm flex items-center gap-2 hover:translate-x-[-4px] transition-transform w-fit"
-          >
-            ← Volver al inicio
-          </Link>
-          <div className="flex flex-col gap-4">
-            <span className="text-[var(--primary-main)] font-bold tracking-widest uppercase text-xs">
-              Nuestra fundadora
-            </span>
-            <h1 className="text-4xl md:text-6xl font-serif text-neutral-900 leading-tight">
-              Sensei <span className="text-[var(--primary-main)] italic">Norma Kerwin</span>
-            </h1>
-            <div className="flex flex-wrap items-center gap-3 text-neutral-500 text-sm">
-              <span>Academia de Idioma Japonés Haru Yo Koi</span>
-              <span>•</span>
-              <span>Directora y docente</span>
-            </div>
+
+
+
+
+
+
+      {/* History Section */}
+      <section className="max-w-7xl mx-auto px-6 w-full grid grid-cols-1 md:grid-cols-2 gap-16 items-center mt-12">
+        <div className="flex flex-col gap-8">
+          <h2 className="text-5xl font-serif text-text">Nuestra Historia</h2>
+          <div className="w-20 h-1 bg-primary"></div>
+          <div className="space-y-6 text-text-muted leading-relaxed">
+            <p >
+              Siempre nos preguntan por qué nuestra academia se llama Haru Yo Koi (春よ来い – "La primavera vendrá")
+            </p>
+            <p className="italic font-medium text-text">
+              Detrás de este nombre hay una historia de amor y pasión por el idioma japonés.
+            </p>
+            <p>
+              Nuestra fundadora, <b>Sensei Norma Kerwin</b>, encontró su inspiración en el estudio del japonés, un idioma armonioso y espiritual. Sin embargo, la verdadera chispa que dio vida a la academia surgió en el <b>2018</b>, cuando el patinador japonés <b>Yuzuru Hanyu</b> realizó una presentación con la canción <b>Haru Yo Koi</b>, como tributo a su madre. Esta canción, interpretada por Arai Yumi en 1994, representa la espera paciente y la certeza de que, con esfuerzo y dedicación, los sueños pueden hacerse realidad.
+            </p>
+            <p>Siguiendo este espíritu de constancia y perseverancia, nació nuestra academia. Aquí, cada estudiante encuentra un lugar donde crecer, aprender y descubrir el hermoso idioma japonés, tal como nuestra fundadora encontró en él su ikigai, su razón de ser.</p>
+            <p>
+              En Haru Yo Koi, creemos que la primavera siempre llega. Solo hay que trabajar con paciencia
+              y dedicación para alcanzar nuestras metas. 🌸
+            </p>
           </div>
         </div>
-      </section>
+        <div className="relative w-full h-full rounded-[40px] overflow-hidden shadow-2xl">
 
-      {/* Cuerpo — artículo + sidebar inspirado en el CV */}
-      <section className="px-6">
-        <div className="max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-12 lg:gap-16">
-          {/* Sidebar */}
-          <aside className="flex flex-col gap-6 lg:sticky lg:top-28 lg:self-start">
-            <div className="rounded-[32px] overflow-hidden shadow-lg border border-neutral-100 aspect-[3/4] relative bg-neutral-200">
-              <Image
-                src="/norma.jpg"
-                alt="Retrato de Sensei Norma Kerwin"
-                fill
-                className="object-cover"
-                sizes="280px"
-              />
-            </div>
-
-            <div className="premium-gradient rounded-[24px] p-6 text-white shadow-lg shadow-primary/20">
-              <p className="text-xs font-bold uppercase tracking-wider opacity-80 mb-2">
-                Actualmente
-              </p>
-              <p className="text-sm leading-relaxed font-medium">
-                Profesora de idioma japonés y español para extranjeros
-              </p>
-            </div>
-
-            <div className="bg-white rounded-[24px] p-6 border border-neutral-100 shadow-sm flex flex-col gap-4">
-              <div className="flex items-start gap-3 text-neutral-700">
-                <Flower2 className="w-5 h-5 text-[var(--primary-main)] shrink-0 mt-0.5" />
-                <p className="text-sm leading-relaxed">
-                  Practica Budismo Zen (hace 30 años). Es macrobiótica.
-                </p>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-[24px] p-6 border border-neutral-100 shadow-sm flex flex-col gap-4">
-              <p className="text-xs font-bold uppercase tracking-wider text-neutral-400">
-                Contacto
-              </p>
-              <a
-                href={whatsappUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-3 text-sm text-neutral-700 hover:text-[var(--primary-main)] transition-colors group"
-              >
-                <MessageCircle className="w-5 h-5 text-[var(--primary-main)] shrink-0" />
-                <span>
-                  (+54) 11 23 87 96 47
-                  <span className="block text-xs text-neutral-400 group-hover:text-[var(--primary-main)]/70">
-                    WhatsApp
-                  </span>
-                </span>
-              </a>
-              <p className="flex items-center gap-3 text-sm text-neutral-700">
-                <Mail className="w-5 h-5 text-[var(--primary-main)] shrink-0" />
-                <span>aijaponesharuyokoi</span>
-              </p>
-            </div>
-          </aside>
-
-          {/* Contenido principal */}
-          <article className="flex flex-col gap-14">
-            <p className="text-xl md:text-2xl text-neutral-700 leading-relaxed font-medium border-l-4 border-[var(--primary-main)] pl-6 italic">
-              Está a cargo de la Academia de Idioma Japonés Haru Yo Koi, donde
-              combina décadas de experiencia docente con su pasión por la cultura
-              y el idioma japonés.
-            </p>
-
-            {/* Títulos habilitantes */}
-            <section className="flex flex-col gap-6">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-[var(--primary-100)] flex items-center justify-center">
-                  <GraduationCap className="w-5 h-5 text-[var(--primary-main)]" />
-                </div>
-                <h2 className="text-2xl md:text-3xl font-serif text-neutral-900">
-                  Títulos habilitantes
-                </h2>
-              </div>
-              <ul className="flex flex-col gap-4">
-                {titulos.map((item, i) => (
-                  <li
-                    key={i}
-                    className="bg-white rounded-[20px] px-6 py-5 border border-neutral-100 shadow-sm hover:shadow-md transition-shadow"
-                  >
-                    <p className="font-semibold text-neutral-900 leading-snug">
-                      {item.titulo}
-                    </p>
-                    {item.institucion && (
-                      <p className="text-sm text-neutral-500 mt-1">
-                        {item.institucion}
-                        {item.año && (
-                          <span className="text-neutral-400"> · {item.año}</span>
-                        )}
-                      </p>
-                    )}
-                    {!item.institucion && item.año && (
-                      <p className="text-sm text-neutral-400 mt-1">{item.año}</p>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            </section>
-
-            {/* Experiencia laboral */}
-            <section className="flex flex-col gap-6">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-[var(--primary-100)] flex items-center justify-center">
-                  <Briefcase className="w-5 h-5 text-[var(--primary-main)]" />
-                </div>
-                <h2 className="text-2xl md:text-3xl font-serif text-neutral-900">
-                  Experiencia laboral
-                </h2>
-              </div>
-              <ul className="flex flex-col gap-4">
-                {experiencia.map((item, i) => (
-                  <li
-                    key={i}
-                    className={`rounded-[20px] px-6 py-5 border shadow-sm transition-shadow ${
-                      item.destacado
-                        ? "bg-[var(--primary-100)]/40 border-[var(--primary-300)]"
-                        : "bg-white border-neutral-100 hover:shadow-md"
-                    }`}
-                  >
-                    <div className="flex flex-wrap items-baseline gap-2 mb-1">
-                      {item.periodo && (
-                        <span className="text-xs font-bold uppercase tracking-wider text-[var(--primary-main)]">
-                          {item.periodo}
-                        </span>
-                      )}
-                      {item.rol && (
-                        <span className="font-semibold text-neutral-900">
-                          {item.rol}
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-neutral-600 leading-relaxed text-sm md:text-base">
-                      {item.descripcion}
-                    </p>
-                  </li>
-                ))}
-              </ul>
-            </section>
-
-            {/* CTA — coherente con el sitio */}
-            <div className="premium-gradient rounded-[32px] p-8 md:p-10 text-white text-center relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-48 h-48 bg-white/10 rounded-full -mr-24 -mt-24 blur-2xl" />
-              <div className="relative z-10 flex flex-col items-center gap-4">
-                <p className="text-lg font-serif leading-snug">
-                  ¿Querés aprender japonés con la Sensei?
-                </p>
-                <div className="flex flex-wrap justify-center gap-4 pt-2">
-                  <Link
-                    href="/cursos"
-                    className="bg-white text-[var(--primary-main)] px-8 py-3 rounded-full font-bold text-sm hover:scale-105 transition-all shadow-lg"
-                  >
-                    Ver cursos
-                  </Link>
-                  <a
-                    href={whatsappUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="bg-transparent border border-white/40 hover:bg-white/10 text-white px-8 py-3 rounded-full font-bold text-sm transition-all"
-                  >
-                    Escribinos
-                  </a>
-                </div>
-              </div>
-            </div>
-          </article>
+          <Image
+            src="/norma.jpg"
+            alt="History"
+            fill
+            className="object-cover"
+          />
         </div>
       </section>
+
+
+
+      <section className="max-w-7xl mx-auto mt-10">
+        <CallToAction whatsappUrl={whatsappUrl} />
+      </section>
+
+
+
     </div>
   );
 }
