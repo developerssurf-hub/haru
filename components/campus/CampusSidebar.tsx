@@ -163,6 +163,7 @@ export default function CampusSidebar({
                     <SidebarLink href="/campus/gestion-cursos">Gestión de Cursos</SidebarLink>
                     <SidebarLink href="/campus/gestion-alumnos">Gestión de Alumnos</SidebarLink>
                     <SidebarLink href="/campus/gestion-examenes">Gestión de Exámenes</SidebarLink>
+                    <SidebarLink href="/campus/gestion-blog">Gestión de Blog</SidebarLink>
                   </>
                 )}
               </div>

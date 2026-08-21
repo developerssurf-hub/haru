@@ -14,7 +14,7 @@ export function ExamenForm({ token, initialData, examenId }: { token: string, in
   // Form State
   const [titulo, setTitulo] = useState(initialData?.titulo || '');
   const [descripcion, setDescripcion] = useState(initialData?.descripcion || '');
-  
+
   // Format dates for datetime-local input
   const formatForInput = (dateStr?: string) => {
     if (!dateStr) return '';
@@ -31,7 +31,7 @@ export function ExamenForm({ token, initialData, examenId }: { token: string, in
   // Extract program IDs from initialData if it exists
   const initialProgramas = initialData?.programas?.map((p: any) => p.id) || [];
   const [programasSeleccionados, setProgramasSeleccionados] = useState<number[]>(initialProgramas);
-  
+
   const initialSecciones = (() => {
     if (!initialData?.preguntas || initialData.preguntas.length === 0) {
       return [{
@@ -74,7 +74,7 @@ export function ExamenForm({ token, initialData, examenId }: { token: string, in
         };
         sections.push(currentSection);
       }
-      
+
       currentSection.preguntas.push({
         id: p.id,
         enunciado: p.enunciado || '',
@@ -96,7 +96,7 @@ export function ExamenForm({ token, initialData, examenId }: { token: string, in
     if (sections[0].preguntas.length === 0 && sections.length > 1) {
       sections.shift();
     }
-    
+
     return sections;
   })();
 
@@ -149,6 +149,19 @@ export function ExamenForm({ token, initialData, examenId }: { token: string, in
     });
     setSecciones(newSecciones);
   };
+
+  const handleAddContexto = (sIndex: number) => {
+    const newSecciones = [...secciones];
+    newSecciones[sIndex].preguntas.push({
+      enunciado: '',
+      tipo: 'contexto',
+      mediaFile: null,
+      mediaPreview: null,
+      opciones: []
+    });
+    setSecciones(newSecciones);
+  };
+
 
   const handleRemovePregunta = (sIndex: number, pIndex: number) => {
     const newSecciones = [...secciones];
@@ -203,7 +216,7 @@ export function ExamenForm({ token, initialData, examenId }: { token: string, in
         for (let i = 0; i < section.preguntas.length; i++) {
           const p = section.preguntas[i];
           let mediaId = p.existingMediaId;
-          
+
           if (p.mediaFile) {
             const formData = new FormData();
             formData.append('files', p.mediaFile);
@@ -274,7 +287,7 @@ export function ExamenForm({ token, initialData, examenId }: { token: string, in
         <h2 className="text-2xl font-bold mb-6 text-gray-900">
           {examenId ? 'Editar Examen' : 'Crear Nuevo Examen'}
         </h2>
-        
+
         {error && (
           <div className="bg-red-50 text-red-700 p-4 rounded-lg mb-6">
             {error}
@@ -284,9 +297,9 @@ export function ExamenForm({ token, initialData, examenId }: { token: string, in
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Título del Examen</label>
-            <input 
+            <input
               required
-              type="text" 
+              type="text"
               value={titulo}
               onChange={e => setTitulo(e.target.value)}
               className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-pink-500 outline-none"
@@ -295,7 +308,7 @@ export function ExamenForm({ token, initialData, examenId }: { token: string, in
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Descripción</label>
-            <textarea 
+            <textarea
               value={descripcion}
               onChange={e => setDescripcion(e.target.value)}
               className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-pink-500 outline-none"
@@ -305,8 +318,8 @@ export function ExamenForm({ token, initialData, examenId }: { token: string, in
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Apertura del Examen (Opcional)</label>
-              <input 
-                type="datetime-local" 
+              <input
+                type="datetime-local"
                 value={fechaApertura}
                 onChange={e => setFechaApertura(e.target.value)}
                 className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-pink-500 outline-none"
@@ -314,8 +327,8 @@ export function ExamenForm({ token, initialData, examenId }: { token: string, in
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Clausura del Examen (Opcional)</label>
-              <input 
-                type="datetime-local" 
+              <input
+                type="datetime-local"
                 value={fechaClausura}
                 onChange={e => setFechaClausura(e.target.value)}
                 className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-pink-500 outline-none"
@@ -323,7 +336,7 @@ export function ExamenForm({ token, initialData, examenId }: { token: string, in
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Máximo de Intentos</label>
-              <input 
+              <input
                 type="number"
                 min="1"
                 value={maxIntentos}
@@ -333,7 +346,7 @@ export function ExamenForm({ token, initialData, examenId }: { token: string, in
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Horas de Espera (Cooldown)</label>
-              <input 
+              <input
                 type="number"
                 min="0"
                 value={horasCooldown}
@@ -343,7 +356,7 @@ export function ExamenForm({ token, initialData, examenId }: { token: string, in
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">% de Aprobación</label>
-              <input 
+              <input
                 type="number"
                 min="0"
                 max="100"
@@ -384,30 +397,42 @@ export function ExamenForm({ token, initialData, examenId }: { token: string, in
         </div>
       </div>
 
+      <div className="fixed bottom-10 right-10 z-50">
+        <button
+          type="submit"
+          disabled={loading}
+          className={`px-8 py-4 rounded-full font-bold text-white shadow-xl transition-all flex items-center gap-2 ${
+            loading ? 'bg-gray-400 cursor-not-allowed' : 'bg-pink-600 hover:bg-pink-700 hover:shadow-2xl hover:-translate-y-1'
+          }`}
+        >
+          {loading ? 'Guardando...' : 'Guardar Examen'}
+        </button>
+      </div>
+
       <div className="space-y-8">
         <div className="flex justify-between items-center">
           <h3 className="text-xl font-bold text-gray-900">Estructura del Examen</h3>
-          <button 
-            type="button" 
+          <button
+            type="button"
             onClick={handleAddSeccion}
             className="px-4 py-2 bg-pink-50 text-pink-700 font-medium rounded-lg hover:bg-pink-100 transition-colors"
           >
             + Agregar Sección
           </button>
         </div>
-        
+
         {secciones.map((section, sIndex) => (
           <div key={section.id} className={`p-6 rounded-2xl ${section.isSection ? 'bg-white border-2 border-pink-100 shadow-sm relative overflow-hidden' : 'bg-transparent px-0'}`}>
             {section.isSection && (
               <div className="absolute top-0 left-0 w-2 h-full bg-pink-500"></div>
             )}
-            
+
             <div className="flex justify-between items-start mb-6">
               {section.isSection ? (
                 <div className="flex-1 mr-4 space-y-3 pl-4">
                   <div>
                     <label className="block text-xs font-bold text-pink-800 uppercase tracking-wider mb-1">Título de la Sección</label>
-                    <input 
+                    <input
                       required
                       type="text"
                       value={section.titulo}
@@ -418,7 +443,7 @@ export function ExamenForm({ token, initialData, examenId }: { token: string, in
                   </div>
                   <div>
                     <label className="block text-xs font-bold text-pink-800 uppercase tracking-wider mb-1">Descripción (opcional)</label>
-                    <textarea 
+                    <textarea
                       value={section.descripcion}
                       onChange={e => handleSeccionChange(sIndex, 'descripcion', e.target.value)}
                       placeholder="Instrucciones para este bloque de preguntas..."
@@ -430,7 +455,7 @@ export function ExamenForm({ token, initialData, examenId }: { token: string, in
               ) : (
                 <h4 className="font-bold text-xl text-gray-800">Preguntas Generales</h4>
               )}
-              
+
               {secciones.length > 1 && (
                 <button type="button" onClick={() => handleRemoveSeccion(sIndex)} className="text-red-500 hover:text-red-700 text-sm font-medium whitespace-nowrap bg-red-50 px-3 py-1.5 rounded-lg">
                   Eliminar Bloque
@@ -442,16 +467,20 @@ export function ExamenForm({ token, initialData, examenId }: { token: string, in
               {section.preguntas.map((p: any, pIndex: number) => (
                 <div key={pIndex} className="bg-gray-50 p-6 rounded-xl border border-gray-200">
                   <div className="flex justify-between items-start mb-4">
-                    <h4 className="font-bold text-lg text-gray-800">Pregunta {pIndex + 1}</h4>
+                    <h4 className="font-bold text-lg text-gray-800">
+                      {p.tipo === 'contexto' ? `Contexto ${pIndex + 1}` : `Pregunta ${pIndex + 1}`}
+                    </h4>
                     <button type="button" onClick={() => handleRemovePregunta(sIndex, pIndex)} className="text-red-500 hover:text-red-700 text-sm font-medium">
-                      Eliminar Pregunta
+                      Eliminar {p.tipo === 'contexto' ? 'Contexto' : 'Pregunta'}
                     </button>
                   </div>
 
                   <div className="space-y-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Enunciado</label>
-                      <textarea 
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        {p.tipo === 'contexto' ? 'Texto del Contexto' : 'Enunciado'}
+                      </label>
+                      <textarea
                         required
                         value={p.enunciado}
                         onChange={e => handlePreguntaChange(sIndex, pIndex, 'enunciado', e.target.value)}
@@ -462,8 +491,8 @@ export function ExamenForm({ token, initialData, examenId }: { token: string, in
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Archivo Multimedia (Opcional)</label>
-                      <input 
-                        type="file" 
+                      <input
+                        type="file"
                         accept="image/*,audio/*"
                         onChange={e => handleFileChange(sIndex, pIndex, e)}
                         className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-pink-50 file:text-pink-700 hover:file:bg-pink-100"
@@ -479,76 +508,77 @@ export function ExamenForm({ token, initialData, examenId }: { token: string, in
                       )}
                     </div>
 
-                    <div className="mt-6">
-                      <label className="block text-sm font-medium text-gray-700 mb-3">Opciones de Respuesta</label>
-                      <div className="space-y-3">
-                        {p.opciones.map((o: any, oIndex: number) => (
-                          <div key={oIndex} className="flex items-center gap-3">
-                            <input 
-                              type="radio" 
-                              name={`correcta-${sIndex}-${pIndex}`}
-                              checked={o.es_correcta}
-                              onChange={() => {
-                                const newSecciones = [...secciones];
-                                newSecciones[sIndex].preguntas[pIndex].opciones.forEach((opt: any, idx: number) => {
-                                  opt.es_correcta = idx === oIndex;
-                                });
-                                setSecciones(newSecciones);
-                              }}
-                              className="w-5 h-5 text-pink-600 focus:ring-pink-500 cursor-pointer"
-                              title="Marcar como correcta"
-                            />
-                            <input 
-                              required
-                              type="text"
-                              value={o.texto}
-                              onChange={e => handleOpcionChange(sIndex, pIndex, oIndex, 'texto', e.target.value)}
-                              placeholder={`Opción ${oIndex + 1}`}
-                              className="flex-1 px-4 py-2 border rounded-lg focus:ring-2 focus:ring-pink-500 outline-none"
-                            />
-                            {p.opciones.length > 2 && (
-                              <button type="button" onClick={() => handleRemoveOpcion(sIndex, pIndex, oIndex)} className="text-gray-400 hover:text-red-500">
-                                ✕
-                              </button>
-                            )}
-                          </div>
-                        ))}
+                    {p.tipo !== 'contexto' && (
+                      <div className="mt-6">
+                        <label className="block text-sm font-medium text-gray-700 mb-3">Opciones de Respuesta</label>
+                        <div className="space-y-3">
+                          {p.opciones.map((o: any, oIndex: number) => (
+                            <div key={oIndex} className="flex items-center gap-3">
+                              <input
+                                type="radio"
+                                name={`correcta-${sIndex}-${pIndex}`}
+                                checked={o.es_correcta}
+                                onChange={() => {
+                                  const newSecciones = [...secciones];
+                                  newSecciones[sIndex].preguntas[pIndex].opciones.forEach((opt: any, idx: number) => {
+                                    opt.es_correcta = idx === oIndex;
+                                  });
+                                  setSecciones(newSecciones);
+                                }}
+                                className="w-5 h-5 text-pink-600 focus:ring-pink-500 cursor-pointer"
+                                title="Marcar como correcta"
+                              />
+                              <input
+                                required
+                                type="text"
+                                value={o.texto}
+                                onChange={e => handleOpcionChange(sIndex, pIndex, oIndex, 'texto', e.target.value)}
+                                placeholder={`Opción ${oIndex + 1}`}
+                                className="flex-1 px-4 py-2 border rounded-lg focus:ring-2 focus:ring-pink-500 outline-none"
+                              />
+                              {p.opciones.length > 2 && (
+                                <button type="button" onClick={() => handleRemoveOpcion(sIndex, pIndex, oIndex)} className="text-gray-400 hover:text-red-500">
+                                  ✕
+                                </button>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleAddOpcion(sIndex, pIndex)}
+                          className="mt-3 text-sm text-pink-600 font-medium hover:text-pink-800"
+                        >
+                          + Añadir Opción
+                        </button>
                       </div>
-                      <button 
-                        type="button" 
-                        onClick={() => handleAddOpcion(sIndex, pIndex)}
-                        className="mt-3 text-sm text-pink-600 font-medium hover:text-pink-800"
-                      >
-                        + Añadir Opción
-                      </button>
-                    </div>
+                    )}
                   </div>
                 </div>
               ))}
 
-              <button 
-                type="button" 
-                onClick={() => handleAddPregunta(sIndex)}
-                className="w-full py-3 border-2 border-dashed border-gray-300 text-gray-600 rounded-xl font-medium hover:bg-gray-50 hover:border-gray-400 transition-colors mt-4"
-              >
-                + Añadir pregunta a {section.isSection ? 'esta sección' : 'este bloque'}
-              </button>
+              <div className="flex gap-4 mt-4">
+                <button
+                  type="button"
+                  onClick={() => handleAddPregunta(sIndex)}
+                  className="flex-1 py-3 border-2 border-dashed border-gray-300 text-gray-600 rounded-xl font-medium hover:bg-gray-50 hover:border-gray-400 transition-colors"
+                >
+                  + Añadir Pregunta
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleAddContexto(sIndex)}
+                  className="flex-1 py-3 border-2 border-dashed border-pink-200 text-pink-600 rounded-xl font-medium hover:bg-pink-50 hover:border-pink-300 transition-colors"
+                >
+                  + Añadir Contexto
+                </button>
+              </div>
             </div>
           </div>
         ))}
       </div>
 
-      <div className="flex justify-end pt-6 border-t border-gray-200">
-        <button 
-          type="submit" 
-          disabled={loading}
-          className={`px-8 py-3 rounded-xl font-bold text-white shadow-md transition-all ${
-            loading ? 'bg-gray-400 cursor-not-allowed' : 'bg-pink-600 hover:bg-pink-700 hover:shadow-lg'
-          }`}
-        >
-          {loading ? 'Guardando Examen...' : 'Guardar Examen'}
-        </button>
-      </div>
+
     </form>
   );
 }
