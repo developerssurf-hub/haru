@@ -212,6 +212,7 @@ export function ExamenForm({ token, initialData, examenId }: { token: string, in
 
     try {
       const finalPreguntas = [];
+      const imageWarnings: string[] = [];
 
       for (const section of secciones) {
         for (let i = 0; i < section.preguntas.length; i++) {
@@ -219,13 +220,18 @@ export function ExamenForm({ token, initialData, examenId }: { token: string, in
           let mediaId = p.existingMediaId;
 
           if (p.mediaFile) {
-            const formData = new FormData();
-            formData.append('files', p.mediaFile);
-            const uploadRes = await uploadStrapi(formData, token);
-            if (uploadRes && uploadRes.length > 0) {
-              mediaId = uploadRes[0].id;
-            } else {
-              throw new Error('Error al subir el archivo multimedia de la pregunta.');
+            try {
+              const formData = new FormData();
+              formData.append('files', p.mediaFile);
+              const uploadRes = await uploadStrapi(formData, token);
+              if (uploadRes && uploadRes.length > 0) {
+                mediaId = uploadRes[0].id;
+              } else {
+                imageWarnings.push(`No se pudo subir la imagen de la pregunta: "${p.enunciado.substring(0, 30)}..."`);
+              }
+            } catch (uploadErr) {
+              console.error('Error al subir imagen:', uploadErr);
+              imageWarnings.push(`Error subiendo la imagen de la pregunta: "${p.enunciado.substring(0, 30)}..."`);
             }
           }
 
@@ -268,7 +274,11 @@ export function ExamenForm({ token, initialData, examenId }: { token: string, in
       }
 
       if (res?.data) {
-        alert(examenId ? 'Examen actualizado exitosamente!' : 'Examen creado exitosamente!');
+        if (imageWarnings.length > 0) {
+          alert(`El examen se guardó, pero hubo problemas con algunas imágenes:\n- ${imageWarnings.join('\n- ')}`);
+        } else {
+          alert(examenId ? 'Examen actualizado exitosamente!' : 'Examen creado exitosamente!');
+        }
         router.push('/campus/gestion-examenes'); // Go back to the list
       } else {
         const strapiError = res?.error?.message || res?.error?.details || JSON.stringify(res?.error) || 'Error desconocido';
